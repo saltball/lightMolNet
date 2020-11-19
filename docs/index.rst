@@ -2,7 +2,7 @@
 lightSchnet
 ===========
 
-This is the documentation of **lightSchnet**.
+This is the documentation of **lightMolnet**.
 
 .. note::
 

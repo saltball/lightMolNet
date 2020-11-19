@@ -8,10 +8,10 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import os
-import sys
 import inspect
+import os
 import shutil
+import sys
 
 __location__ = os.path.join(os.getcwd(), os.path.dirname(
     inspect.getfile(inspect.currentframe())))
@@ -35,7 +35,7 @@ except ImportError:
     from sphinx import apidoc
 
 output_dir = os.path.join(__location__, "api")
-module_dir = os.path.join(__location__, "../src/lightschnet")
+module_dir = os.path.join(__location__, "../src/lightMolNet")
 try:
     shutil.rmtree(output_dir)
 except FileNotFoundError:
@@ -81,7 +81,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'lightSchnet'
+project = u'lightMolNet'
 copyright = u'2020, hanyanbo'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -216,7 +216,7 @@ html_static_path = ['_static']
 # html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'lightschnet-doc'
+htmlhelp_basename = 'lightMolNet-doc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -235,8 +235,8 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'user_guide.tex', u'lightSchnet Documentation',
-   u'hanyanbo', 'manual'),
+    ('index', 'user_guide.tex', u'lightMolNet Documentation',
+     u'hanyanbo', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
