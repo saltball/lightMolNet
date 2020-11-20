@@ -12,8 +12,9 @@ import numpy as np
 from ase.data import atomic_numbers
 from ase.db import connect
 from ase.units import Hartree
-from lightMolNet.datasets import FileSystemAtomsData
 from tqdm import tqdm
+
+from lightMolNet.datasets import FileSystemAtomsData
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +119,7 @@ class npydatadb(FileSystemAtomsData):
             npydatadb.U0
         ]
         refdb = connect(self.filecontextdir['refdbpath'])
-        npydata = np.load(self.filecontextdir['npydata'])
+        npydata = np.load(self.filecontextdir['npypath'])
         for i in tqdm(range(1, len(self.refdb) + 1)):
             atoms = refdb.get_atoms(i)
             en = npydata[i - 1]

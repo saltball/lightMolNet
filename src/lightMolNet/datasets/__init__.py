@@ -60,7 +60,7 @@ class FileSystemAtomsData(AtomsData):
                 "The database has already been proceed and stored "
                 "at {}. Check your data.".format(self.dbpath)
             )
-        elif not os.path.exists(self.filecontextdir):
+        elif isinstance(self.filecontextdir, str) and not os.path.exists(self.filecontextdir):
             logger.error(
                 "The files directory does not exist! Check if "
                 "{} is your data directory.".format(os.path.abspath(self.filecontextdir))
