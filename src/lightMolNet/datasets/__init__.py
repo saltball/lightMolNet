@@ -21,14 +21,15 @@ class FileSystemAtomsData(AtomsData):
     ----------
     dbpath:str
 
-    filecontextdir:str
+    filecontextdir:str or dict
+        specific format depend on child class
 
     """
 
     def __init__(
             self,
             dbpath: str,
-            filecontextdir: str,
+            filecontextdir: str or dict,
             subset=None,
             load_only=None,
             available_properties=None,

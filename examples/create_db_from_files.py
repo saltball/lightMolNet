@@ -11,7 +11,7 @@ import torch
 from ase.data import atomic_numbers
 from lightMolNet.data.dataloader import _collate_aseatoms
 from lightMolNet.data.partitioning import random_split_partial
-from lightMolNet.datasets.g16datadb import G16datadb
+from lightMolNet.datasets.npydatadb import G16datadb
 from torch.utils.data import DataLoader
 
 refat = {"C": {"U0": -37.843662}}
