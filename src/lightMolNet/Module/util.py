@@ -11,6 +11,7 @@ from functools import partial
 import torch
 from torch import nn
 from torch.nn.init import constant_, xavier_uniform_
+from torch.nn.parameter import Parameter
 
 zeros_initializer = partial(constant_, val=0.0)
 
@@ -184,13 +185,19 @@ class ScaleShift(nn.Module):
             mean value :math:`\mu`.
         stddev:torch.Tensor
             standard deviation value :math:`\sigma`.
+        learnable:bool
+            if True, mean and stddev are parameters to learn.
 
     """
 
-    def __init__(self, mean, stddev):
+    def __init__(self, mean, stddev, learnable=True):
         super(ScaleShift, self).__init__()
-        self.register_buffer("mean", mean)
-        self.register_buffer("stddev", stddev)
+        if not learnable:
+            self.register_buffer("mean", mean)
+            self.register_buffer("stddev", stddev)
+        else:
+            self.mean = Parameter(torch.Tensor([0]))
+            self.stddev = Parameter(torch.Tensor([1]))
 
     def forward(self, input):
         """Compute layer output.

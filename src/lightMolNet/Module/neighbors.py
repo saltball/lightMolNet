@@ -57,32 +57,25 @@ def atom_distances(
     """
 
     # Construct auxiliary index vector
-    if len(positions.size()) == 3:
-        INBATCH = 1
-        n_batch = positions.size()[0]
-        idx_m = torch.arange(n_batch,
-                             device=positions.device,
-                             dtype=torch.long)[:, None, None]
-        # Get indices of neighboring atom positions
-        pos_xyz = positions[idx_m, neighbors[:, :, :], :]
-        # Subtract positions of central atoms to get distance vectors
-        dist_vec = pos_xyz - positions[:, :, None, :]
-        distances = torch.norm(dist_vec, 2, 3)
-    elif len(positions.size() == 2):
-        # n_batch = -1
-        # Get indices of neighboring atom positions
-        pos_xyz = positions[neighbors]
-
-        dist_vec = pos_xyz - positions[:, None, :]
-        distances = torch.norm(dist_vec, 2, 2)
+    n_batch = positions.size()[0]
+    idx_m = torch.arange(n_batch,
+                         device=positions.device,
+                         dtype=torch.long)[:, None, None]
+    # Get indices of neighboring atom positions
+    pos_xyz = positions[idx_m, neighbors[:, :, :], :]
+    # Subtract positions of central atoms to get distance vectors
+    dist_vec = pos_xyz - positions[:, :, None, :]
 
     # add cell offset
+
     if cell is not None:
         B, A, N, D = cell_offsets.size()
         cell_offsets = cell_offsets.view(B, A * N, D)
         offsets = cell_offsets.bmm(cell)
         offsets = offsets.view(B, A, N, D)
         dist_vec += offsets
+
+    distances = torch.norm(dist_vec, 2, 3)
 
     if neighbor_mask is not None:
         # Avoid problems with zero distances in forces (instability of square
@@ -97,10 +90,8 @@ def atom_distances(
         tmp_distances = torch.ones_like(distances)
         tmp_distances[neighbor_mask != 0] = distances[neighbor_mask != 0]
 
-        if normalize_vecs and INBATCH:
+        if normalize_vecs:
             dist_vec = dist_vec / tmp_distances[:, :, :, None]
-        elif normalize_vecs and not INBATCH:
-            dist_vec = dist_vec / tmp_distances[:, :, None]
         return distances, dist_vec
     return distances
 

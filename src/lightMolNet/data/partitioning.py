@@ -15,20 +15,20 @@ from torch.utils.data import random_split
 def random_split_partial(
         data,
         partial=None,
-        split_file=None
+        split_file="split"
 ):
     if partial is None:
         partial = [60, 20, 20]
     num_train = partial[0]
     num_val = partial[1]
     num_test = partial[2]
-    if split_file is not None and os.path.exists(split_file):
-        S = np.load(split_file)
+    if split_file is not None and os.path.exists(r"{}.npz".format(split_file)):
+        S = np.load(r"{}.npz".format(split_file))
         train_idx = S["train_idx"].tolist()
         val_idx = S["val_idx"].tolist()
         test_idx = S["test_idx"].tolist()
 
-    else:
+    elif split_file is None or not os.path.exists(r"{}.npz".format(split_file)):
         if num_train is None or num_val is None:
             raise ValueError(
                 "You have to supply either split sizes (num_train /"
@@ -51,7 +51,11 @@ def random_split_partial(
             [
                 n_train, n_val, n_test
             ])
-        train = data.create_subset(train_idx)
-        val = data.create_subset(val_idx)
-        test = data.create_subset(test_idx)
+    if split_file is not None and not os.path.exists(r"{}.npz".format(split_file)):
+        np.savez(
+            split_file, train_idx=train_idx, val_idx=val_idx, test_idx=test_idx
+        )
+    train = data.create_subset(train_idx)
+    val = data.create_subset(val_idx)
+    test = data.create_subset(test_idx)
     return train, val, test
