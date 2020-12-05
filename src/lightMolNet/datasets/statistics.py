@@ -10,6 +10,7 @@ import logging
 
 import torch
 import torch.utils.data
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,9 @@ def get_statistics(
         }
         logger.info("statistics will be calculated...")
 
-        for row in dataloader:
+        tbar = tqdm(dataloader)
+        for row in tbar:
+            tbar.set_description_str("Calculating statistics...")
             for prop in property_names:
                 _update_statistic(
                     divide_by_atoms[prop],

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from ase.units import eV, Bohr, Debye
 from pkg_resources import get_distribution, DistributionNotFound
 
 try:
@@ -15,6 +16,9 @@ class Properties:
     """
     Keys to access structure properties in `lightMolNet.data.AtomsData`
     """
+
+    # common
+    UNIT = "_Unit"
 
     # geometry
     Z = "_atomic_numbers"
@@ -35,6 +39,7 @@ class Properties:
 
     # chemical properties
     energy = "energy"
+    energy_U0 = "energy_U0"
     forces = "forces"
     stress = "stress"
     dipole_moment = "dipole_moment"
@@ -66,6 +71,13 @@ class Properties:
         electric_field,
         magnetic_field,
     ]
+
+    properties_unit = {
+        energy: eV,
+        energy_U0: eV,
+        dipole_moment: Debye,
+        iso_polarizability: Bohr ** 3
+    }
 
     external_fields = [electric_field, magnetic_field]
 
