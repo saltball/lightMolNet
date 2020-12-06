@@ -48,10 +48,10 @@ def cli_main():
     dataset.prepare_data()
     dataset.setup()
     scheduler = {"_scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau,
-                 "patience": 25,
+                 "patience": 50,
                  "factor": 0.8,
-                 "min_lr": 1e-6,
-                 "eps": 1e-8
+                 "min_lr": 1e-7,
+                 "eps": 1e-7
                  }
     model = LitNet(learning_rate=1e-4,
                    datamodule=dataset,

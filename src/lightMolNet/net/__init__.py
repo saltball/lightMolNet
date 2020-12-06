@@ -104,7 +104,7 @@ class LitNet(pl.LightningModule):
         self.output = ModuleList(self.output)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.learning_rate)
         self.scheduler = scheduler["_scheduler"](
-            self.parameters(),
+            self.optimizer,
             patience=scheduler["patience"],
             factor=scheduler["factor"],
             min_lr=scheduler["min_lr"],
