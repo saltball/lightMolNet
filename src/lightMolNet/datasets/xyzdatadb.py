@@ -15,6 +15,7 @@ from ase.data import atomic_numbers
 from ase.units import Hartree
 from tqdm import tqdm
 
+from lightMolNet import Properties
 from lightMolNet.datasets import FileSystemAtomsData
 
 logger = logging.getLogger(__name__)
@@ -58,7 +59,7 @@ class XYZDataDB(FileSystemAtomsData):
 
     """
 
-    U0 = "energy_U0"
+    U0 = Properties.energy_U0
     units = [
         Hartree
     ]

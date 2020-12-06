@@ -11,7 +11,8 @@ import torch.nn.functional as F
 
 mse_loss = F.mse_loss
 
-mae_loss = F.smooth_l1_loss
+mae_loss_for_train = F.smooth_l1_loss
+mae_loss_for_metric = F.l1_loss
 
 
 def rsme_loss(input, target, reduction='mean'):

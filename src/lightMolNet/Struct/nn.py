@@ -7,15 +7,16 @@
 # ====================================== #
 
 import torch
+from torch import nn
+
 from lightMolNet import Properties
 from lightMolNet.Module.atomcentersymfunc import GaussianSmearing
 from lightMolNet.Module.cutoff import CosineCutoff
 from lightMolNet.Module.interaction import SimpleAtomInteraction
 from lightMolNet.Module.neighbors import AtomDistances
-from torch import nn
 
 
-class LitMolNet(nn.Module):
+class SchNet(nn.Module):
     r"""
 
     """
@@ -35,7 +36,7 @@ class LitMolNet(nn.Module):
                  distance_expansion: torch.nn.Module = None,
                  charged_systems: bool = False,
                  ):
-        super(LitMolNet, self).__init__()
+        super(SchNet, self).__init__()
         # Embeddings for element, each of which is a vector of size (n_atom_embeddings)
         self.n_atom_embeddings = n_atom_embeddings
         self.embeddings = nn.Embedding(max_Z, n_atom_embeddings, padding_idx=0)

@@ -10,8 +10,8 @@ import logging
 import os
 
 import numpy as np
-from ase.data import atomic_numbers
 from ase.units import Hartree
+
 from lightMolNet.datasets import FileSystemAtomsData
 from lightMolNet.datasets.fileprase import G16LogFiles
 
@@ -32,7 +32,7 @@ class G16datadb(FileSystemAtomsData):
         maximum number of element embedding.
 
     refatom:dict
-        references of atoms,like {"C":{"U0": -0.500273,"U":...}}
+        references of atoms,like {"U0":array,"U":array}
 
     """
 
@@ -46,7 +46,7 @@ class G16datadb(FileSystemAtomsData):
             dbpath,
             logfiledir,
             zmax=18,
-            refatom=None,
+            atomref=None,
             subset=None,
             load_only=None,
             units=None,
@@ -59,7 +59,7 @@ class G16datadb(FileSystemAtomsData):
             G16datadb.U0
         ]
         self.logfiledir = logfiledir
-        self.refatom = refatom
+        self.atomref = atomref
         self.zmax = zmax
 
         super(G16datadb, self).__init__(
@@ -81,7 +81,7 @@ class G16datadb(FileSystemAtomsData):
             dbpath=self.dbpath,
             logfiledir=self.logfiledir,
             zmax=self.zmax,
-            refatom=self.refatom,
+            atomref=self.atomref,
             subset=subidx,
             load_only=self.load_only,
             units=self.units,
@@ -97,13 +97,10 @@ class G16datadb(FileSystemAtomsData):
         logger.info("Atom references: Done.")
 
     def _load_atomrefs(self):
-        labels = [
-            G16datadb.U0
-        ]
-        atref = np.zeros((self.zmax, len(labels)))
-        for z in self.refatom.keys():
-            atref[atomic_numbers[z], 0] = float(self.refatom[z]["U0"])  # Only energy
-
+        labels = [str(i) for i in self.refatom.keys()]
+        atref = []
+        for i in self.refatom.keys():
+            atref.append(self.refatom[i])
         return atref, labels
 
     def _load_data(self):
