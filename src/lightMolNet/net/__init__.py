@@ -29,7 +29,8 @@ class LitNet(pl.LightningModule):
             batch_size=None,
             atomref=None,
             means=None,
-            stddevs=None
+            stddevs=None,
+            scheduler=None
     ):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
@@ -102,13 +103,15 @@ class LitNet(pl.LightningModule):
             )
         self.output = ModuleList(self.output)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.learning_rate)
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer,
-            patience=25,
-            factor=0.8,
-            min_lr=1e-6,
-            eps=1e-8
+        self.scheduler = scheduler["_scheduler"](
+            self.parameters(),
+            patience=scheduler["patience"],
+            factor=scheduler["factor"],
+            min_lr=scheduler["min_lr"],
+            eps=scheduler["eps"]
         )
+        if self.scheduler is None:
+            raise NotImplementedError("You must implement one optimizer scheduler.")
 
     def forward(self, inputs):
         for net in self.represent:

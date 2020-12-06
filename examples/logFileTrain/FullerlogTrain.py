@@ -7,6 +7,7 @@
 # ====================================== #
 
 import pytorch_lightning as pl
+import torch
 from ase.units import Hartree
 
 from lightMolNet import Properties
@@ -16,7 +17,7 @@ from lightMolNet.data.atomsref import get_refatoms
 from lightMolNet.datasets.LitDataSet.G16DataSet import G16DataSet
 from lightMolNet.net import LitNet
 
-Batch_Size = 64
+Batch_Size = 32
 USE_GPU = 1
 
 refat_b3lypgd3 = {Properties.UNIT: {Properties.energy_U0: Hartree},
@@ -46,17 +47,24 @@ def cli_main():
                          pin_memory=True)
     dataset.prepare_data()
     dataset.setup()
+    scheduler = {"_scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau,
+                 "patience": 25,
+                 "factor": 0.8,
+                 "min_lr": 1e-6,
+                 "eps": 1e-8
+                 }
     model = LitNet(learning_rate=1e-4,
                    datamodule=dataset,
                    representNet=[SchNet],
                    outputNet=[Atomwise],
                    outputPro=[Properties.energy_U0],
-                   batch_size=Batch_Size)
+                   batch_size=Batch_Size,
+                   scheduler=scheduler)
     trainer = pl.Trainer(
         callbacks=[checkpoint_callback],
         gpus=USE_GPU,
         auto_lr_find=True,
-        # benchmark=True,
+        benchmark=True,
         max_epochs=10000,
         # auto_scale_batch_size='binsearch'
     )
