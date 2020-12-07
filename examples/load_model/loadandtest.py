@@ -2,14 +2,13 @@
 # ====================================== #
 # @Author  : Yanbo Han
 # @Email   : yanbohan98@gmail.com
-# @File    : FullerlogTrain.py
+# @File    : loadandtest.py
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 
 import pytorch_lightning as pl
 import torch
 from ase.units import Hartree
-
 from lightMolNet import Properties
 from lightMolNet.Struct.Atomistic.Atomwise import Atomwise
 from lightMolNet.Struct.nn import SchNet
@@ -31,7 +30,7 @@ refat_b3lypgd3 = {Properties.UNIT: {Properties.energy_U0: Hartree},
 atomrefs = get_refatoms(refat_b3lypgd3, Properties.energy_U0)
 
 
-def cli_main():
+def cli_main(ckpt_path):
     from pytorch_lightning.callbacks import ModelCheckpoint
     checkpoint_callback = ModelCheckpoint(
         monitor='val_loss',
@@ -40,6 +39,20 @@ def cli_main():
         save_last=True
     )
 
+    state_dict = torch.load(ckpt_path)
+    model = LitNet(learning_rate=1e-4,
+                   # datamodule=dataset,
+                   atomref=atomrefs,
+                   representNet=[SchNet],
+                   outputNet=[Atomwise],
+                   outputPro=[Properties.energy_U0],
+                   batch_size=Batch_Size,
+                   # scheduler=scheduler
+                   )
+
+    model.load_state_dict(state_dict["state_dict"])
+    model.freeze()
+
     dataset = G16DataSet(dbpath="fullerxtb.db",
                          logfiledir=r"D:\CODE\PycharmProjects\lightMolNet\examples\logdata",
                          atomref=atomrefs,
@@ -47,19 +60,7 @@ def cli_main():
                          pin_memory=True)
     dataset.prepare_data()
     dataset.setup(data_partial=None)
-    scheduler = {"_scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau,
-                 "patience": 50,
-                 "factor": 0.8,
-                 "min_lr": 1e-7,
-                 "eps": 1e-7
-                 }
-    model = LitNet(learning_rate=1e-4,
-                   datamodule=dataset,
-                   representNet=[SchNet],
-                   outputNet=[Atomwise],
-                   outputPro=[Properties.energy_U0],
-                   batch_size=Batch_Size,
-                   scheduler=scheduler)
+
     trainer = pl.Trainer(
         callbacks=[checkpoint_callback],
         gpus=USE_GPU,
@@ -69,20 +70,12 @@ def cli_main():
         # auto_scale_batch_size='binsearch'
     )
 
-    ### train
-    # trainer.fit(model)
+    f = open("newpara.txt", "w")
+    print(list(model.named_parameters()), file=f)
 
-    ### scale_batch
-    # trainer.tune(model)
-
-    ### lr_finder
-    lr_finder = trainer.tuner.lr_find(model, min_lr=1e-7, max_lr=0.5e-2)
-    fig = lr_finder.plot(suggest=True, show=True)
-    print(lr_finder.suggestion())
-
-    # result = trainer.test(model,verbose=True)
-    # print(result)
+    result = trainer.test(model, datamodule=dataset, verbose=True)
+    print(result)
 
 
 if __name__ == '__main__':
-    cli_main()
+    cli_main(r"FullNet-epoch=2718-val_loss=0.04.ckpt")

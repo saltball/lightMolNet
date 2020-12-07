@@ -9,8 +9,6 @@
 import os
 import re
 
-from ase.units import Hartree, eV
-
 
 class CalculationResultError(Exception):
     pass
@@ -234,5 +232,15 @@ def structureDictParser(stucDict):
 
 
 if __name__ == '__main__':
-    file = G16LogFiles("D:\CODE\PycharmProjects\lightMolNet\src\lightMolNet\data\DOUBLEC20_Ih_1.log")
-    print(file.get_final_pairs())
+    from ase.units import Hartree, eV
+
+    file = G16LogFiles("D:\CODE\PycharmProjects\lightMolNet\examples\logdata\C20_Ih_1.log")
+    all_atoms = []
+    all_properties = []
+    for at, en in zip(file.get_all_pairs()[0], file.get_all_pairs()[1]):
+        properties = {}
+        all_atoms.append(at)
+        pn = "energy_U0"
+        properties[pn] = en * Hartree / eV
+        all_properties.append(properties)
+    print(all_properties)
