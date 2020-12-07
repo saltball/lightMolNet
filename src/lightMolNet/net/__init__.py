@@ -110,13 +110,11 @@ class LitNet(pl.LightningModule):
             )
         self.output = ModuleList(self.output)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.learning_rate)
+        schedulerpara = {k: v for k, v in scheduler.items() if k != "_scheduler"}
         if scheduler is not None:
             self.scheduler = scheduler["_scheduler"](
                 self.optimizer,
-                patience=scheduler["patience"],
-                factor=scheduler["factor"],
-                min_lr=scheduler["min_lr"],
-                eps=scheduler["eps"]
+                **schedulerpara
             )
 
     def forward(self, inputs):

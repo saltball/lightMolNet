@@ -92,14 +92,14 @@ class G16datadb(FileSystemAtomsData):
         self._load_data()
         logger.info("Data Loaded.")
         atref, labels = self._load_atomrefs()
-        self.set_metadata({"atomrefs": atref.tolist(), "atref_labels": labels})
+        self.set_metadata({"atomrefs": atref, "atref_labels": labels})
         logger.info("Atom references: Done.")
 
     def _load_atomrefs(self):
         labels = [str(i) for i in self.atomref.keys()]
         atref = []
         for i in self.atomref.keys():
-            atref.append(self.atomref[i])
+            atref.append(self.atomref[i].tolist())
         return atref, labels
 
     def _load_data(self):
