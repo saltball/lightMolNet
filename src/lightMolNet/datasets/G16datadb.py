@@ -11,7 +11,6 @@ import os
 
 import numpy as np
 from ase.units import Hartree
-
 from lightMolNet.datasets import FileSystemAtomsData
 from lightMolNet.datasets.fileprase import G16LogFiles
 
@@ -97,10 +96,10 @@ class G16datadb(FileSystemAtomsData):
         logger.info("Atom references: Done.")
 
     def _load_atomrefs(self):
-        labels = [str(i) for i in self.refatom.keys()]
+        labels = [str(i) for i in self.atomref.keys()]
         atref = []
-        for i in self.refatom.keys():
-            atref.append(self.refatom[i])
+        for i in self.atomref.keys():
+            atref.append(self.atomref[i])
         return atref, labels
 
     def _load_data(self):
@@ -116,9 +115,9 @@ class G16datadb(FileSystemAtomsData):
                     "Please make sure your data is clean."
                 )
             elif ".log" or ".out" in os.path.splitext(item)[-1]:
-                properties = {}
                 file = G16LogFiles(os.path.join(self.logfiledir, item))
                 for at, en in zip(file.get_all_pairs()[0], file.get_all_pairs()[1]):
+                    properties = {}
                     all_atoms.append(at)
                     pn = self.available_properties[0]
                     properties[pn] = np.array([en * self.units[pn]])
