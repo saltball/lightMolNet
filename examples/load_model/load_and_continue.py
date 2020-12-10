@@ -2,7 +2,7 @@
 # ====================================== #
 # @Author  : Yanbo Han
 # @Email   : yanbohan98@gmail.com
-# @File    : loadandtest.py
+# @File    : load_and_continue.py
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 
@@ -38,20 +38,15 @@ def cli_main(ckpt_path):
         save_top_k=2,
         save_last=True
     )
+    scheduler = {"_scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau,
+                 "patience": 50,
+                 "factor": 0.8,
+                 "min_lr": 1e-8,
+                 "eps": 1e-10,
+                 "cooldown": 100
+                 }
 
     state_dict = torch.load(ckpt_path)
-    model = LitNet(learning_rate=1e-4,
-                   # datamodule=dataset,
-                   atomref=atomrefs,
-                   representNet=[SchNet],
-                   outputNet=[Atomwise],
-                   outputPro=[Properties.energy_U0],
-                   batch_size=Batch_Size,
-                   # scheduler=scheduler
-                   )
-
-    model.load_state_dict(state_dict["state_dict"])
-    model.freeze()
 
     dataset = G16DataSet(dbpath="fullerxtb.db",
                          logfiledir=r"D:\CODE\PycharmProjects\lightMolNet\examples\logdata",
@@ -60,6 +55,18 @@ def cli_main(ckpt_path):
                          pin_memory=True)
     dataset.prepare_data()
     dataset.setup(data_partial=None)
+
+    model = LitNet(learning_rate=1e-4,
+                   datamodule=dataset,
+                   atomref=atomrefs,
+                   representNet=[SchNet],
+                   outputNet=[Atomwise],
+                   outputPro=[Properties.energy_U0],
+                   batch_size=Batch_Size,
+                   scheduler=scheduler
+                   )
+
+    model.load_state_dict(state_dict["state_dict"])
 
     trainer = pl.Trainer(
         callbacks=[checkpoint_callback],
@@ -70,11 +77,7 @@ def cli_main(ckpt_path):
         # auto_scale_batch_size='binsearch'
     )
 
-    f = open("newpara.txt", "w")
-    print(list(model.named_parameters()), file=f)
-
-    result = trainer.test(model, datamodule=dataset, verbose=True)
-    print(result)
+    trainer.fit(model)
 
 
 if __name__ == '__main__':

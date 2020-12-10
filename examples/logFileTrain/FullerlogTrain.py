@@ -51,7 +51,8 @@ def cli_main():
                  "patience": 50,
                  "factor": 0.8,
                  "min_lr": 1e-7,
-                 "eps": 1e-7
+                 "eps": 1e-8,
+                 "cooldown": 25
                  }
     model = LitNet(learning_rate=1e-4,
                    datamodule=dataset,
@@ -70,18 +71,18 @@ def cli_main():
     )
 
     ### train
-    # trainer.fit(model)
+    trainer.fit(model)
 
     ### scale_batch
     # trainer.tune(model)
 
     ### lr_finder
-    lr_finder = trainer.tuner.lr_find(model, min_lr=1e-7, max_lr=0.5e-2)
-    fig = lr_finder.plot(suggest=True, show=True)
-    print(lr_finder.suggestion())
+    # lr_finder = trainer.tuner.lr_find(model, min_lr=1e-6, max_lr=0.5e-2)
+    # fig = lr_finder.plot(suggest=True, show=True)
+    # print(lr_finder.suggestion())
 
-    # result = trainer.test(model,verbose=True)
-    # print(result)
+    result = trainer.test(model, verbose=True)
+    print(result)
 
 
 if __name__ == '__main__':
