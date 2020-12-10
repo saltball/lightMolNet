@@ -110,8 +110,8 @@ class LitNet(pl.LightningModule):
             )
         self.output = ModuleList(self.output)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.learning_rate)
-        schedulerpara = {k: v for k, v in scheduler.items() if k != "_scheduler"}
         if scheduler is not None:
+            schedulerpara = {k: v for k, v in scheduler.items() if k != "_scheduler"}
             self.scheduler = scheduler["_scheduler"](
                 self.optimizer,
                 **schedulerpara
@@ -172,6 +172,6 @@ class LitNet(pl.LightningModule):
         # self.hparams available because we called self.save_hyperparameters()
         return {"optimizer": self.optimizer,
                 'lr_scheduler': self.scheduler,
-                'monitor': 'val_loss',
+                'monitor': 'val_loss_MAE',
                 'interval': 'epoch'
                 }

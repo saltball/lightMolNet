@@ -22,7 +22,7 @@ class G16DataSet(LitDataSet):
             num_workers=cpu_count(),
             pin_memory=False,
             statistics=True,
-            valshuffle=True,
+            valshuffle=False,
             proceed=True
     ):
         super().__init__(
