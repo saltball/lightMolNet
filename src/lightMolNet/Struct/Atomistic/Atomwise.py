@@ -14,7 +14,7 @@ from torch.autograd import grad
 from lightMolNet import AtomWiseInputPropertiesList
 from lightMolNet.Module.GatherNet import MLP
 from lightMolNet.Module.activations import shifted_softplus
-from lightMolNet.Module.util import Aggregate, ScaleShift
+from lightMolNet.Module.util import Aggregate, ScaleShift, GetItem
 from ..Atomistic import AtomwiseError
 
 
@@ -136,6 +136,7 @@ class Atomwise(nn.Module):
         # build output network
         if outnet is None:
             self.out_net = nn.Sequential(
+                GetItem(AtomWiseInputPropertiesList.representation_value),
                 MLP(n_in, n_out, n_neurons, n_layers, activation),
             )
         else:
@@ -163,7 +164,7 @@ class Atomwise(nn.Module):
         atom_mask = inputs[AtomWiseInputPropertiesList.atom_mask]
 
         # run prediction
-        yi = self.out_net(inputs[AtomWiseInputPropertiesList.representation_value])
+        yi = self.out_net(inputs)
         yi = self.standardize(yi)
 
         if self.atomref is not None:

@@ -11,7 +11,7 @@ import torch
 from ase.db import connect
 from ase.units import Hartree
 
-from lightMolNet import Properties
+from lightMolNet import Properties, InputPropertiesList, InputPropertiesList_y
 from lightMolNet.Struct.Atomistic.Atomwise import Atomwise
 from lightMolNet.Struct.nn import SchNet
 from lightMolNet.data.atomsref import get_refatoms
@@ -87,15 +87,26 @@ def _convert_atoms(
             inputs[Properties.neighbors] * inputs[Properties.neighbor_mask].long()
     )
 
-    return inputs
+    batch_list = [None for i in range(len(InputPropertiesList.input_list))]
+    properties_list = [None for i in range(len(InputPropertiesList_y.input_list))]
+    for index, pn in enumerate(inputs):
+        if pn in InputPropertiesList_y.input_list:
+            properties_list[InputPropertiesList_y.input_list.index(pn)] = inputs[pn]
+        elif pn in InputPropertiesList.input_list:
+            batch_list[InputPropertiesList.input_list.index(pn)] = inputs[pn]
+    return batch_list, properties_list
 
 
 def get_input(idx, conn):
-    result = _convert_atoms(get_atom(idx, conn))
-    result["_idx"] = torch.LongTensor(np.array([idx], dtype=np.int))
-    for k, v in result.items():
-        result[k] = v[None, :].to(device="cuda")
-    return result
+    result, ref = _convert_atoms(get_atom(idx, conn))
+    result[InputPropertiesList.idx] = torch.LongTensor(np.array([idx], dtype=np.int))
+    for idx, k in enumerate(result):
+        if k is not None:
+            result[idx] = k[None, :].to(device="cuda")
+    for idx, k in enumerate(ref):
+        if k is not None:
+            ref[idx] = k[None, :].to(device="cuda")
+    return result, ref
 
 
 Batch_Size = 32
@@ -167,7 +178,7 @@ def cli_main(ckpt_path):
     # np.savez(file="FullDFT", pred=pred, refs=refs)
 
     # TO ONNX
-    input_sample = get_input(1, conn)
+    input_sample, ref = get_input(1, conn)
     # model(input_sample)
 
     dynamic_axes = {'inputs': {0: 'batch_size'},
@@ -176,7 +187,7 @@ def cli_main(ckpt_path):
 
     torch.onnx.export(
         model,
-        (list(input_sample.values()), list(input_sample.keys())),
+        input_sample,
         "model.onnx",
         input_names=["inputs", "keys"],
         output_names=["output"],

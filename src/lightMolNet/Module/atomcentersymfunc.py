@@ -39,18 +39,18 @@ def gaussian_smearing(
     -----
         gaussian_smearing return the values like
 
-        .. math:: exp(-0.5(w\Delta d)^2)
+        .. math:: exp(-0.5(1/w\Delta d)^2)
         And :math:`\Delta d` defined by whether the parameter `centered` is `True`.
 
     """
     if not centered:
         # compute width of Gaussian functions (using an overlap of 1 STDDEV)
-        coeff = -0.5 / torch.pow(widths, 2)
+        coeff = -0.5 * torch.pow(widths, -2)
         # Use advanced indexing to compute the individual components
         diff = distances[:, :, :, None] - offset[None, None, None, :]
     else:
         # if Gaussian functions are centered, use offsets to compute widths
-        coeff = -0.5 / torch.pow(offset, 2)
+        coeff = -0.5 * torch.pow(offset, -2)
         # if Gaussian functions are centered, no offset is subtracted
         diff = distances[:, :, :, None]
     # compute smear distance values
