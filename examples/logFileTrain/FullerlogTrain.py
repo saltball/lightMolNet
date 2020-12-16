@@ -34,7 +34,7 @@ atomrefs = get_refatoms(refat_b3lypgd3, Properties.energy_U0)
 def cli_main():
     from pytorch_lightning.callbacks import ModelCheckpoint
     checkpoint_callback = ModelCheckpoint(
-        monitor='val_loss_MAE',
+        monitor='val_0_loss_MAE',
         filename='FullNet-{epoch:02d}-{val_loss:.4f}',
         save_top_k=2,
         save_last=True

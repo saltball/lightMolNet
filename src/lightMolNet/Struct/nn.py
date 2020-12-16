@@ -9,7 +9,7 @@
 import torch
 from torch import nn
 
-from lightMolNet import Properties
+from lightMolNet import InputPropertiesList
 from lightMolNet.Module.atomcentersymfunc import GaussianSmearing
 from lightMolNet.Module.cutoff import CosineCutoff
 from lightMolNet.Module.interaction import SimpleAtomInteraction
@@ -34,7 +34,7 @@ class SchNet(nn.Module):
                  cutoff_network: torch.nn.Module = CosineCutoff,
                  trainable_gaussians: bool = False,
                  distance_expansion: torch.nn.Module = None,
-                 charged_systems: bool = False,
+                 # charged_systems: bool = False,
                  ):
         super(SchNet, self).__init__()
         # Embeddings for element, each of which is a vector of size (n_atom_embeddings)
@@ -86,18 +86,28 @@ class SchNet(nn.Module):
 
         # set attributes
         self.return_intermediate = return_intermediate
-        self.charged_systems = charged_systems
-        if charged_systems:
-            self.charge = nn.Parameter(torch.Tensor(1, n_atom_embeddings))
-            self.charge.data.normal_(0, 1.0 / n_atom_embeddings ** 0.5)
+        # self.charged_systems = charged_systems
+        # if charged_systems:
+        #     self.charge = nn.Parameter(torch.Tensor(1, n_atom_embeddings))
+        #     self.charge.data.normal_(0, 1.0 / n_atom_embeddings ** 0.5)
 
-    def forward(self, inputs):
+    def forward(self, inputs: list):
         """Compute atomic representations/embeddings.
 
             Parameters
             ----------
-                inputs:dict of torch.Tensor
-                    dictionary of input tensors.
+                inputs: list
+                    atomic_numbers:torch.Tensor,
+
+                    positions:torch.Tensor,
+
+                    cell:torch.Tensor,
+
+                    cell_offset:torch.Tensor,
+
+                    neighbors:torch.Tensor,
+
+                    neighbor_mask:torch.Tensor
 
             Returns
             -------
@@ -109,22 +119,17 @@ class SchNet(nn.Module):
 
         """
         # get tensors from input dictionary
-        atomic_numbers = inputs[Properties.Z]
-        positions = inputs[Properties.R]
-        cell = inputs[Properties.cell]
-        cell_offset = inputs[Properties.cell_offset]
-        neighbors = inputs[Properties.neighbors]
-        neighbor_mask = inputs[Properties.neighbor_mask]
-        atom_mask = inputs[Properties.atom_mask]
+        atomic_numbers = inputs[InputPropertiesList.Z]
+        positions = inputs[InputPropertiesList.R]
+        cell = inputs[InputPropertiesList.cell]
+        cell_offset = inputs[InputPropertiesList.cell_offset]
+        neighbors = inputs[InputPropertiesList.neighbors]
+        neighbor_mask = inputs[InputPropertiesList.neighbor_mask]
 
         # get atom embeddings for the input atomic numbers
         x = self.embeddings(atomic_numbers)
 
-        if False and self.charged_systems and Properties.charge in inputs.keys():
-            n_atoms = torch.sum(atom_mask, dim=1, keepdim=True)
-            charge = inputs[Properties.charge] / n_atoms  # B
-            charge = charge[:, None] * self.charge  # B x F
-            x = x + charge
+        # charged system is not supported.
 
         # compute interatomic distance of every atom to its neighbors
         r_ij = self.distances(

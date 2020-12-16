@@ -8,13 +8,13 @@
 
 import numpy as np
 import torch
-from lightMolNet import Properties
-from lightMolNet.Module.GatherNet import MLP
-from lightMolNet.Module.activations import shifted_softplus
-from lightMolNet.Module.util import Aggregate, GetItem, ScaleShift
 from torch import nn
 from torch.autograd import grad
 
+from lightMolNet import AtomWiseInputPropertiesList
+from lightMolNet.Module.GatherNet import MLP
+from lightMolNet.Module.activations import shifted_softplus
+from lightMolNet.Module.util import Aggregate, ScaleShift
 from ..Atomistic import AtomwiseError
 
 
@@ -71,7 +71,7 @@ class Atomwise(nn.Module):
         stddev:torch.Tensor or None
             standard deviation of property
             (default: None)
-        atomref:torch.Tensor or None
+        atomref:torch.Tensor or torch.nn.Embedding or None
             reference single-atom properties. Expects
             an (max_z + 1) x 1 array where atomref[Z] corresponds to the reference
             property of element Z. The value of atomref[0] must be zero, as this
@@ -105,7 +105,7 @@ class Atomwise(nn.Module):
             contributions=None,
             derivative=None,
             negative_dr=False,
-            stress=None,
+            # stress=None,
             create_graph=True,
             mean=None,
             stddev=None,
@@ -120,7 +120,7 @@ class Atomwise(nn.Module):
         self.contributions = contributions
         self.derivative = derivative
         self.negative_dr = negative_dr
-        self.stress = stress
+        # self.stress = stress
 
         mean = torch.FloatTensor([0.0]) if mean is None else mean
         stddev = torch.FloatTensor([1.0]) if stddev is None else stddev
@@ -136,7 +136,6 @@ class Atomwise(nn.Module):
         # build output network
         if outnet is None:
             self.out_net = nn.Sequential(
-                GetItem("representation"),
                 MLP(n_in, n_out, n_neurons, n_layers, activation),
             )
         else:
@@ -159,11 +158,12 @@ class Atomwise(nn.Module):
         r"""
         predicts atomwise property
         """
-        atomic_numbers = inputs[Properties.Z]
-        atom_mask = inputs[Properties.atom_mask]
+        atomic_numbers = inputs[AtomWiseInputPropertiesList.Z]
+        positions = inputs[AtomWiseInputPropertiesList.R]
+        atom_mask = inputs[AtomWiseInputPropertiesList.atom_mask]
 
         # run prediction
-        yi = self.out_net(inputs)
+        yi = self.out_net(inputs[AtomWiseInputPropertiesList.representation_value])
         yi = self.standardize(yi)
 
         if self.atomref is not None:
@@ -182,30 +182,30 @@ class Atomwise(nn.Module):
             sign = -1.0 if self.negative_dr else 1.0
             dy = grad(
                 result[self.property],
-                inputs[Properties.R],
+                positions,
                 grad_outputs=torch.ones_like(result[self.property]),
                 create_graph=self.create_graph,
                 retain_graph=True,
             )[0]
             result[self.derivative] = sign * dy
 
-        if self.stress is not None:
-            cell = inputs[Properties.cell]
-            # Compute derivative with respect to cell displacements
-            stress = grad(
-                result[self.property],
-                inputs["displacement"],
-                grad_outputs=torch.ones_like(result[self.property]),
-                create_graph=self.create_graph,
-                retain_graph=True,
-            )[0]
-            # Compute cell volume
-            volume = torch.sum(
-                cell[:, 0, :] * torch.cross(cell[:, 1, :], cell[:, 2, :], dim=1),
-                dim=1,
-                keepdim=True,
-            )[..., None]
-            # Finalize stress tensor
-            result[self.stress] = stress / volume
+        # if self.stress is not None:
+        #     cell = inputs[AtomWiseInputPropertiesList.cell]
+        #     # Compute derivative with respect to cell displacements
+        #     stress = grad(
+        #         result[self.property],
+        #         inputs[AtomWiseInputPropertiesList.displacement],
+        #         grad_outputs=torch.ones_like(result[self.property]),
+        #         create_graph=self.create_graph,
+        #         retain_graph=True,
+        #     )[0]
+        #     # Compute cell volume
+        #     volume = torch.sum(
+        #         cell[:, 0, :] * torch.cross(cell[:, 1, :], cell[:, 2, :], dim=1),
+        #         dim=1,
+        #         keepdim=True,
+        #     )[..., None]
+        #     # Finalize stress tensor
+        #     result[self.stress] = stress / volume
 
         return result

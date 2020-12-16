@@ -9,7 +9,7 @@
 import numpy as np
 import torch
 
-from lightMolNet import Properties
+from lightMolNet import Properties, InputPropertiesList_y, InputPropertiesList
 
 
 def _collate_aseatoms(examples):
@@ -92,4 +92,11 @@ def _collate_aseatoms(examples):
             s = (k,) + tuple([slice(0, d) for d in shape])
             batch[Properties.neighbor_pairs_mask][s] = nbh_idx_j >= 0
 
-    return batch
+    batch_list = [None for i in range(len(InputPropertiesList.input_list))]
+    properties_list = [None for i in range(len(InputPropertiesList_y.input_list))]
+    for index, pn in enumerate(batch):
+        if pn in InputPropertiesList_y.input_list:
+            properties_list[InputPropertiesList_y.input_list.index(pn)] = batch[pn]
+        elif pn in InputPropertiesList.input_list:
+            batch_list[InputPropertiesList.input_list.index(pn)] = batch[pn]
+    return batch_list, properties_list

@@ -60,6 +60,7 @@ class Properties:
 
     properties = [
         energy,
+        energy_U0,
         forces,
         stress,
         dipole_moment,
@@ -100,3 +101,53 @@ class Properties:
         polarizability_derivatives: [electric_field, position],
         shielding: [magnetic_field, magnetic_moments],
     }
+
+
+class InputPropertiesList:
+    """
+    Properties Index of dataLoader in lightMolNet package.
+    """
+    Z = 0
+    R = 1
+    cell = 2
+    cell_offset = 3
+    neighbors = 4
+    neighbor_mask = 5
+    idx = 6
+    atom_mask = 7
+
+    input_list = [
+        Properties.Z,
+        Properties.R,
+        Properties.cell,
+        Properties.cell_offset,
+        Properties.neighbors,
+        Properties.neighbor_mask,
+        "_idx",
+        Properties.atom_mask
+    ]
+
+
+class InputPropertiesList_y:
+    energy_U0 = 0
+    input_list = [
+        Properties.energy_U0
+    ]
+
+
+class AtomWiseInputPropertiesList:
+    Z = 0
+    R = 1
+    cell = 2
+    representation_value = 3
+    atom_mask = 4
+    # displacement=5
+
+    input_list = [
+        Properties.Z,
+        Properties.R,
+        Properties.cell,
+        "representation_value",
+        Properties.atom_mask,
+        # "displacement"
+    ]

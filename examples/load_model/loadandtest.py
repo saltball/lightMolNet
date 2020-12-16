@@ -9,6 +9,7 @@
 import pytorch_lightning as pl
 import torch
 from ase.units import Hartree
+
 from lightMolNet import Properties
 from lightMolNet.Struct.Atomistic.Atomwise import Atomwise
 from lightMolNet.Struct.nn import SchNet
@@ -78,4 +79,4 @@ def cli_main(ckpt_path):
 
 
 if __name__ == '__main__':
-    cli_main(r"last.ckpt")
+    cli_main(r"D:\CODE\PycharmProjects\lightMolNet\examples\load_model\lightning_logs\version_4\checkpoints\FullNet-epoch=2721-val_loss=0.0000.ckpt")

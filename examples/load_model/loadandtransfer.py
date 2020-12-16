@@ -6,12 +6,11 @@
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 
-import time
-
 import numpy as np
 import torch
 from ase.db import connect
 from ase.units import Hartree
+
 from lightMolNet import Properties
 from lightMolNet.Struct.Atomistic.Atomwise import Atomwise
 from lightMolNet.Struct.nn import SchNet
@@ -19,7 +18,6 @@ from lightMolNet.data.atomsref import get_refatoms
 from lightMolNet.datasets.LitDataSet.G16DataSet import G16DataSet
 from lightMolNet.environment import SimpleEnvironmentProvider
 from lightMolNet.net import LitNet
-from tqdm import tqdm
 
 conn = connect(r"fullerxtb.db")
 
@@ -113,6 +111,8 @@ refat_b3lypgd3 = {Properties.UNIT: {Properties.energy_U0: Hartree},
 
 atomrefs = get_refatoms(refat_b3lypgd3, Properties.energy_U0)
 
+global model, input_sample
+
 
 def cli_main(ckpt_path):
     state_dict = torch.load(ckpt_path)
@@ -133,37 +133,57 @@ def cli_main(ckpt_path):
                          logfiledir=r"D:\CODE\PycharmProjects\lightMolNet\examples\logdata",
                          atomref=atomrefs,
                          batch_size=Batch_Size,
+                         statistics=False,
                          pin_memory=True)
     dataset.prepare_data()
     dataset.setup(data_partial=None)
 
     model.to(device="cuda")
 
-    error = 0
-    MRSE = 0
-    delta = np.inf
-    tbar = tqdm(range(1, len(conn) + 1))
-    timecost = np.inf
+    # error = 0
+    # MRSE = 0
+    # delta = np.inf
+    # tbar = tqdm(range(1, len(conn) + 1))
+    # timecost = np.inf
+    #
+    # pred = np.array([])
+    # refs = np.array([])
 
-    pred = np.array([])
-    refs = np.array([])
+    # for idx in tbar:
+    #     tbar.set_postfix(delta=delta, MAE=error, MRSE=MRSE, time=timecost)
+    #     inputAtom = get_input(idx, conn)
+    #     st = time.time()
+    #     result = model(inputAtom)
+    #     en = time.time()
+    #     timecost = en - st
+    #     result = result["energy_U0"].cpu()[0]
+    #     pred = np.append(pred, result)
+    #     refe = conn[idx].data["energy_U0"]
+    #     refs = np.append(refs, refe)
+    #     delta = np.abs(result - refe)
+    #     error = (error * (idx - 1) + delta) / idx
+    #     MRSE = np.sqrt((MRSE ** 2 * (idx - 1) + delta ** 2) / idx)
+    #
+    # np.savez(file="FullDFT", pred=pred, refs=refs)
 
-    for idx in tbar:
-        tbar.set_postfix(delta=delta, MAE=error, MRSE=MRSE, time=timecost)
-        inputAtom = get_input(idx, conn)
-        st = time.time()
-        result = model(inputAtom)
-        en = time.time()
-        timecost = en - st
-        result = result["energy_U0"].cpu()[0]
-        pred = np.append(pred, result)
-        refe = conn[idx].data["energy_U0"]
-        refs = np.append(refs, refe)
-        delta = np.abs(result - refe)
-        error = (error * (idx - 1) + delta) / idx
-        MRSE = np.sqrt((MRSE ** 2 * (idx - 1) + delta ** 2) / idx)
+    # TO ONNX
+    input_sample = get_input(1, conn)
+    # model(input_sample)
 
-    np.savez(file="FullDFT", pred=pred, refs=refs)
+    dynamic_axes = {'inputs': {0: 'batch_size'},
+                    "output": {0: "batch_size"}
+                    }
+
+    torch.onnx.export(
+        model,
+        (list(input_sample.values()), list(input_sample.keys())),
+        "model.onnx",
+        input_names=["inputs", "keys"],
+        output_names=["output"],
+        opset_version=11,
+        do_constant_folding=True,
+        dynamic_axes=dynamic_axes
+    )
 
 
 if __name__ == '__main__':

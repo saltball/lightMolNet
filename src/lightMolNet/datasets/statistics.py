@@ -12,6 +12,8 @@ import torch
 import torch.utils.data
 from tqdm import tqdm
 
+from lightMolNet import InputPropertiesList, InputPropertiesList_y
+
 logger = logging.getLogger(__name__)
 
 
@@ -88,13 +90,13 @@ def _update_statistic(
     """
         Helper function to update iterative mean / stddev statistics
     """
-    property_value = row[property_name]
+    property_value = row[-1][InputPropertiesList_y.input_list.index(property_name)]
     if single_atom_ref is not None:
-        z = row["_atomic_numbers"]
+        z = row[0][InputPropertiesList.Z]
         p0 = torch.sum(torch.from_numpy(single_atom_ref[z]).float(), dim=1)
         property_value -= p0
     if divide_by_atoms:
-        property_value /= torch.sum(row["_atom_mask"], dim=1, keepdim=True)
+        property_value /= torch.sum(row[0][InputPropertiesList.atom_mask], dim=1, keepdim=True)
     statistics.add_sample(property_value)
 
 
