@@ -239,3 +239,9 @@ class LitNet(pl.LightningModule):
                 'monitor': 'val_0_loss_MAE',
                 'interval': 'epoch'
                 }
+
+    def todict(self):
+        state_dict = self.state_dict()
+        for k, v in state_dict.items():
+            state_dict[k] = v.detach().cpu().numpy()
+        return state_dict

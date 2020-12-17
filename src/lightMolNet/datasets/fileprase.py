@@ -6,6 +6,7 @@
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 
+import logging
 import os
 import re
 
@@ -171,10 +172,10 @@ class G16LogFiles(object):
                     pass
         return contents
 
-    def get_ase_atoms(self, idx):
+    def get_ase_atoms(self, idxs):
         from ase import Atoms
         AtomsList = []
-        for item in idx:
+        for item in idxs:
             stuc = self.get_content(item)
             symbols, positions = structureDictParser(stucDict=stuc["StructureDict"])
             at = Atoms(
@@ -187,12 +188,13 @@ class G16LogFiles(object):
         return AtomsList
 
     def get_energy(self, idx):
-        # Use eV as energy unit
+        """Use eV as energy unit"""
         return self.content['EnergyDict'][idx] * Hartree / eV
 
-    def get_energies(self, idx):
+    def get_energies(self, idxs):
+        """Use eV as energy unit"""
         energies = []
-        for item in idx:
+        for item in idxs:
             energies.append(self.content['EnergyDict'][item])
         return energies
 
@@ -215,10 +217,24 @@ class G16LogFiles(object):
         return ats, en
 
     def get_final_pairs(self):
+        r"""
+        Get the last Atoms:properties pairs
+            often used for g16 opt task and check.
+
+        Returns
+        -------
+            ([ase.Atoms], list)
+
+        """
         from ase.io.gaussian import read_gaussian_out
-        return ([read_gaussian_out(open(self.path, "r"))],
-                [read_gaussian_out(open(self.path, "r")).get_potential_energy()]
-                )
+        try:
+            return ([read_gaussian_out(open(self.path, "r"))],
+                    [read_gaussian_out(open(self.path, "r")).get_potential_energy()]
+                    )
+        except IndexError:
+            tmp = self.get_all_pairs()
+            logging.warning("Wrong in calling ase read, please check your files.")
+            return [tmp[0][-1]], [tmp[1][-1]]
 
 
 def structureDictParser(stucDict):
@@ -243,4 +259,4 @@ if __name__ == '__main__':
         pn = "energy_U0"
         properties[pn] = en * Hartree / eV
         all_properties.append(properties)
-    print(all_properties)
+    print(all_atoms[0].__dict__)
