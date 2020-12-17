@@ -10,6 +10,8 @@ import logging
 import os
 import re
 
+from ase.units import Hartree, eV
+
 
 class CalculationResultError(Exception):
     pass
@@ -195,7 +197,7 @@ class G16LogFiles(object):
         """Use eV as energy unit"""
         energies = []
         for item in idxs:
-            energies.append(self.content['EnergyDict'][item])
+            energies.append(self.content['EnergyDict'][item] * Hartree / eV)
         return energies
 
     def get_all_pairs(self):
@@ -228,9 +230,10 @@ class G16LogFiles(object):
         """
         from ase.io.gaussian import read_gaussian_out
         try:
-            return ([read_gaussian_out(open(self.path, "r"))],
-                    [read_gaussian_out(open(self.path, "r")).get_potential_energy()]
-                    )
+            result = ([read_gaussian_out(open(self.path, "r"))],
+                      [read_gaussian_out(open(self.path, "r")).get_potential_energy()]
+                      )
+            return result
         except IndexError:
             tmp = self.get_all_pairs()
             logging.warning("Wrong in calling ase read, please check your files.")
@@ -248,7 +251,6 @@ def structureDictParser(stucDict):
 
 
 if __name__ == '__main__':
-    from ase.units import Hartree, eV
 
     file = G16LogFiles("D:\CODE\PycharmProjects\lightMolNet\examples\logdata\C20_Ih_1.log")
     all_atoms = []
