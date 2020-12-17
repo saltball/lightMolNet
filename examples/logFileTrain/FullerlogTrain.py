@@ -28,7 +28,7 @@ refat_b3lypgd3 = {Properties.UNIT: {Properties.energy_U0: Hartree},
                   # "F": {Properties.energy_U0: -99.718730}
                   }
 
-atomrefs = get_refatoms(refat_b3lypgd3, Properties.energy_U0)
+atomrefs = get_refatoms(refat_b3lypgd3, Properties.energy_U0, z_max=18)
 
 
 def cli_main():

@@ -29,7 +29,7 @@ refat_qm9 = {Properties.UNIT: {Properties.energy_U0: Hartree},
              }
 
 
-def get_refatoms(refat: dict, properties: str or list or tuple = None):
+def get_refatoms(refat: dict, properties: str or list or tuple = None, z_max=118):
     r"""
 
     Parameters
@@ -46,6 +46,9 @@ def get_refatoms(refat: dict, properties: str or list or tuple = None):
              }
     properties:str or list or tuple
         default to litmolnet.Properties.energy_U0
+    z_max:int
+        maximum of atomic number.
+        default to 118
     Returns
     -------
         dict:
@@ -62,7 +65,7 @@ def get_refatoms(refat: dict, properties: str or list or tuple = None):
         if pn not in refat[Properties.UNIT].keys():
             raise KeyError("Key {} not in atomref {}. Check your code.".format(pn, refat.__repr__()))
         else:
-            atomrefarray.setdefault(pn, np.zeros([118, 1]))
+            atomrefarray.setdefault(pn, np.zeros([z_max, 1]))
     for atomsymbol, v in refat.items():
         if atomsymbol != Properties.UNIT:
             for pn in v.keys():

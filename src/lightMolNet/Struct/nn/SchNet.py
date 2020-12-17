@@ -2,7 +2,7 @@
 # ====================================== #
 # @Author  : Yanbo Han
 # @Email   : yanbohan98@gmail.com
-# @File    : nn.py
+# @File    : SchNet.py
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 
@@ -18,7 +18,12 @@ from lightMolNet.Module.neighbors import AtomDistances
 
 class SchNet(nn.Module):
     r"""
-
+    References
+    ----------
+    .. [#SchNetPack] K.T. Schütt, P. Kessel, M. Gastegger, K.A. Nicoli,
+            A. Tkatchenko, K.-R. Müller.
+            SchNetPack: A Deep Learning Toolbox For Atomistic Systems.
+            Journal of Chemical Theory and Computation 15 (1), pp. 448-455. 2018.
     """
 
     def __init__(self,

@@ -14,7 +14,7 @@ from torch.nn import ModuleList
 import lightMolNet.Module.functional as F
 from lightMolNet import Properties, AtomWiseInputPropertiesList, InputPropertiesList
 from lightMolNet.Struct.Atomistic.Atomwise import Atomwise
-from lightMolNet.Struct.nn import SchNet
+from lightMolNet.Struct.nn.SchNet import SchNet
 
 
 class represent2out(torch.nn.Module):
