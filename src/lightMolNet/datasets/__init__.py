@@ -8,9 +8,11 @@
 
 import os
 
-from lightMolNet.data.atoms import AtomsData, get_center_of_mass, logger
+from lightMolNet.data.atoms import AtomsData, get_center_of_mass
 from lightMolNet.environment import SimpleEnvironmentProvider
+from lightMolNet.logger import DebugLogger
 
+logger = DebugLogger(__name__)
 
 class FileSystemAtomsData(AtomsData):
     r"""
@@ -25,7 +27,6 @@ class FileSystemAtomsData(AtomsData):
         specific format depend on child class
 
     """
-
     def __init__(
             self,
             dbpath: str,
@@ -48,17 +49,21 @@ class FileSystemAtomsData(AtomsData):
                          environment_provider=environment_provider,
                          collect_triples=collect_triples,
                          centering_function=centering_function, )
-        if proceed:
+        if not proceed:
+            if not os.path.exists(dbpath):
+                logger.error(f"Database file {dbpath} is not exist. Please Check.")
+        elif proceed:
             self.proceed()
 
     def proceed(self):
         """
         Wrapper function for proceed files.
         """
+        logger.info("Proceeding files")
         if os.path.exists(self.dbpath):
             logger.info(
                 "The database has already been proceed and stored "
-                "at {}. Check your data.".format(self.dbpath)
+                "at {}. Check your code.".format(self.dbpath)
             )
         elif isinstance(self.filecontextdir, str) and not os.path.exists(self.filecontextdir):
             logger.error(

@@ -6,19 +6,20 @@
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 
-import logging
 import os
 
 import numpy as np
 from ase.atoms import Atoms
 from ase.data import atomic_numbers
 from ase.units import Hartree
-from tqdm import tqdm
-
 from lightMolNet import Properties
 from lightMolNet.datasets import FileSystemAtomsData
+from lightMolNet.logger import DebugLogger
+from tqdm import tqdm
 
-logger = logging.getLogger(__name__)
+logger = DebugLogger(__name__)
+
+Add_Batch = 10000
 
 
 def simple_read_xyz_xtb(fileobj, index=None):
@@ -31,7 +32,7 @@ def simple_read_xyz_xtb(fileobj, index=None):
         symbols = []
         positions = []
         n = i * (natoms + 2) + 2
-        comments = {"energy": float(lines[n - 1].split()[1])}
+        comments = dict(energy=float(lines[n - 1].split()[1]))
         for line in lines[n:n + natoms]:
             symbol, x, y, z = line.split()[:4]
             symbol = symbol.lower().capitalize()
@@ -135,24 +136,29 @@ class XYZDataDB(FileSystemAtomsData):
         labels = [
             XYZDataDB.U0
         ]
+        all_count = 0
         tbar = tqdm(recursion_xyz_file(self.xyzfiledir))
         for f in tbar:
             tbar.set_description_str("Working on File {}".format(f))
-            properties = {}
             with open(f, "r") as xyzf:
                 file = simple_read_xyz_xtb(xyzf)
                 for at in file:
-                    en = at.info["energy"]
+                    pn = self.available_properties[0]
+                    properties = dict({pn: np.array([at.info["energy"] * self.units[pn]])})  # Only energy
                     at.info = {}
                     all_atoms.append(at)
-                    pn = self.available_properties[0]
-                    properties[pn] = np.array([en * self.units[pn]])
                     all_properties.append(properties)
+                    all_count += 1
+            if len(all_properties) > Add_Batch:
+                self.add_systems(all_atoms, all_properties)
+                tbar.set_postfix(Note=f"{len(all_properties)} molecules were just writen to db...")
+                all_atoms = []
+                all_properties = []
 
-        logger.info("Write atoms to db...")
-        self.add_systems(all_atoms, all_properties)
-
-        logger.info("Done.")
+        if len(all_properties) > 0:
+            self.add_systems(all_atoms, all_properties)
+            logger.info("Write the last atoms to db...")
+        logger.info(f"Done. Add {all_count} molecules to db file.")
 
 
 def recursion_xyz_file(rootpath):

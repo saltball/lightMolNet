@@ -15,20 +15,16 @@ References
    The atomic simulation environment -- a Python library for working with atoms.
    Journal of Physics: Condensed Matter, 9, 27. 2017.
 """
-import logging
 import os
 import warnings
 
 import numpy as np
 import torch
 from ase.db import connect
-from tqdm import tqdm
-
 from lightMolNet import Properties
 from lightMolNet.environment import collect_atom_triples, SimpleEnvironmentProvider
 from lightMolNet.module_utils import read_deprecated_database
-
-logger = logging.getLogger(__name__)
+from tqdm import tqdm
 
 
 def get_center_of_mass(atoms):

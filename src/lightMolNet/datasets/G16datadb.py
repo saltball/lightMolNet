@@ -6,15 +6,15 @@
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 
-import logging
 import os
 
 import numpy as np
 from ase.units import Hartree
 from lightMolNet.datasets import FileSystemAtomsData
 from lightMolNet.datasets.fileprase import G16LogFiles
+from lightMolNet.logger import DebugLogger
 
-logger = logging.getLogger(__name__)
+logger = DebugLogger(__name__)
 
 
 class G16datadb(FileSystemAtomsData):

@@ -2,28 +2,27 @@
 # ====================================== #
 # @Author  : Yanbo Han
 # @Email   : yanbohan98@gmail.com
-# @File    : G16DataSet.py
+# @File    : xtbxyzdataset.py
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
-
 from multiprocessing import cpu_count
 
-from lightMolNet.datasets.G16datadb import G16datadb
 from lightMolNet.datasets.LitDataSet import LitDataSet
+from lightMolNet.datasets.xyzdatadb import XYZDataDB
 
 
-class G16DataSet(LitDataSet):
+class XtbXyzDataSet(LitDataSet):
     def __init__(
             self,
             dbpath=None,
-            logfiledir=None,  #
+            xyzfiledir=None,  #
             atomref=None,
             batch_size=10,
             num_workers=cpu_count(),
             pin_memory=False,
             statistics=True,
             valshuffle=False,
-            proceed=True
+            proceed=False
     ):
         super().__init__(
             dbpath=dbpath,
@@ -34,12 +33,12 @@ class G16DataSet(LitDataSet):
             statistics=statistics,
             valshuffle=valshuffle,
         )
-        self.logfiledir = logfiledir
+        self.xyzfiledir = xyzfiledir
         self.proceed = proceed
 
     def prepare_data(self, stage=None):
-        self.dataset = G16datadb(dbpath=self.dbpath,
-                                 logfiledir=self.logfiledir,
-                                 atomref=self.atomref,
+        self.dataset = XYZDataDB(dbpath=self.dbpath,
+                                 xyzfiledir=self.xyzfiledir,
+                                 refatom=self.atomref,
                                  proceed=self.proceed
                                  )

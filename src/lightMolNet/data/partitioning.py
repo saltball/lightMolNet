@@ -9,7 +9,10 @@
 import os
 
 import numpy as np
+from lightMolNet.logger import DebugLogger
 from torch.utils.data import random_split
+
+logger = DebugLogger(__name__)
 
 
 def random_split_partial(
@@ -34,7 +37,7 @@ def random_split_partial(
                 "You have to supply either split sizes (num_train /"
                 + " num_val) or an npz file with splits."
             )
-
+        logger.debug(f"num_train = {num_train}; num_val={num_val}, len(data)={len(data)}")
         assert num_train + num_val <= len(
             data
         ), "Dataset is smaller than num_train + num_val!"

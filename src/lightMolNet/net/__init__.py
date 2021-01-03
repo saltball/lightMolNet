@@ -6,15 +6,14 @@
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 
+import lightMolNet.Module.functional as F
 import numpy as np
 import pytorch_lightning as pl
 import torch
-from torch.nn import ModuleList
-
-import lightMolNet.Module.functional as F
 from lightMolNet import Properties, AtomWiseInputPropertiesList, InputPropertiesList
 from lightMolNet.Struct.Atomistic.Atomwise import Atomwise
 from lightMolNet.Struct.nn.SchNet import SchNet
+from torch.nn import ModuleList
 
 
 class represent2out(torch.nn.Module):
@@ -153,7 +152,17 @@ class LitNet(pl.LightningModule):
             self,
             inputs
     ):
-        # TODO:restructure input to multiple parameters instead of using dict.
+        """
+
+        Parameters
+        ----------
+        inputs:list
+            check order of `lightMolNet.InputPropertiesList`
+
+        Returns
+        -------
+
+        """
         # representation parts
         representation = []
         for net in self.represent:

@@ -58,6 +58,9 @@ class LitDataSet(pl.LightningDataModule):
             self.means = means
             self.stddevs = stddevs
 
+    def prepare_data(self):
+        raise NotImplementedError(f"Method `prepare_data()` must be implemented for instance of class `{self.__class__}`")
+
     def train_dataloader(self):
         return DataLoader(
             self.train,
