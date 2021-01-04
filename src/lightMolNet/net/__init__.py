@@ -13,7 +13,10 @@ import torch
 from lightMolNet import Properties, AtomWiseInputPropertiesList, InputPropertiesList
 from lightMolNet.Struct.Atomistic.Atomwise import Atomwise
 from lightMolNet.Struct.nn.SchNet import SchNet
+from lightMolNet.logger import InfoLogger
 from torch.nn import ModuleList
+
+logger = InfoLogger(__name__)
 
 
 class represent2out(torch.nn.Module):
@@ -63,27 +66,26 @@ class LitNet(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters("batch_size", "learning_rate", "means", "stddevs")
         self.datamodule = datamodule
+
         if stddevs is None:
             if self.datamodule is not None:
                 if self.datamodule.stddevs is not None:
-                    self.stddevs = self.datamodule.stddevs
-            else:
-                self.stddevs = stddevs
-        else:
-            self.stddevs = stddevs
+                    stddevs = self.datamodule.stddevs
+        self.stddevs = stddevs
         if self.datamodule is not None and self.stddevs is None:
-            raise ValueError("Please specify `stddev`.")
+            logger.warning("No stddev specified, using stddev={Properties.energy_U0: 1}.")
+            self.stddevs = {Properties.energy_U0: 1}
+            # raise ValueError("Please specify `stddev`.")
 
         if means is None:
             if self.datamodule is not None:
                 if self.datamodule.means is not None:
-                    self.means = self.datamodule.means
-            else:
-                self.means = means
-        else:
-            self.means = means
+                    means = self.datamodule.means
+        self.means = means
         if self.datamodule is not None and self.means is None:
-            raise ValueError("Please specify `mean`.")
+            logger.warning("No stddev specified, using means={Properties.energy_U0: 0}.")
+            self.means = {Properties.energy_U0: 0}
+            # raise ValueError("Please specify `mean`.")
 
         if self.datamodule is not None and atomref is None:
             self.atomref = self.datamodule.atomref

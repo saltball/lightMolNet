@@ -41,13 +41,16 @@ def cli_main():
         save_top_k=2,
         save_last=True
     )
-
+    statistics = False
+    if statistics is False:
+        logger.warning("Use explicit statistic values.")
     dataset = XtbXyzDataSet(dbpath="fullerxtbdata20to88.db",
                             xyzfiledir=r"D:\CODE\#DATASETS\FullDB\xTBBack",
                             atomref=atomrefs,
                             batch_size=Batch_Size,
                             pin_memory=True,
-                            proceed=True
+                            # proceed=True,
+                            statistics=False,
                             )
     dataset.prepare_data()
     dataset.setup(data_partial=None)
@@ -64,7 +67,10 @@ def cli_main():
                    outputNet=[Atomwise],
                    outputPro=[Properties.energy_U0],
                    batch_size=Batch_Size,
-                   scheduler=scheduler)
+                   scheduler=scheduler
+                   # means=0,
+                   # stddevs=1,
+                   )
     trainer = pl.Trainer(
         callbacks=[checkpoint_callback],
         gpus=USE_GPU,
@@ -75,7 +81,7 @@ def cli_main():
     )
 
     ### train
-    # trainer.fit(model)
+    trainer.fit(model)
 
     ### scale_batch
     # trainer.tune(model)
@@ -85,8 +91,8 @@ def cli_main():
     # fig = lr_finder.plot(suggest=True, show=True)
     # print(lr_finder.suggestion())
 
-    # result = trainer.test(model, verbose=True)
-    # print(result)
+    result = trainer.test(model, verbose=True)
+    print(result)
 
 
 if __name__ == '__main__':

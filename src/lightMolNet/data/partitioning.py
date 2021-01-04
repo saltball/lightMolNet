@@ -49,6 +49,7 @@ def random_split_partial(
         n_train = int(partial[0])
         n_val = int(partial[1])
         n_test = n - n_train - n_val
+        logger.debug(f"Data will divided to [train:val:test]={num_train}:{num_val}:{num_test}")
         train_idx, val_idx, test_idx = random_split(
             range(n),
             [
