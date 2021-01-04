@@ -339,7 +339,7 @@ class AtomsData(torch.utils.data.Dataset):
         # extract properties
         properties = {}
         for pname in self.load_only:
-            properties[pname] = torch.FloatTensor(row.data[pname])
+            properties[pname] = torch.FloatTensor(np.array(row.data[pname]))
 
         # extract/calculate structure
         properties = _convert_atoms(
