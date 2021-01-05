@@ -215,12 +215,16 @@ class LitNet(pl.LightningModule):
 
         outs = self.forward(batch)
         loss = torch.zeros([Nouts])
+        test_result = {}
         for outPro in range(Nouts):
+            test_result.update({f"pred{outPro}": None,
+                                f"ref{outPro}": None})
             loss[outPro] = F.mae_loss_for_train(outs[self.outputPro[outPro]], y[outPro])
             # Logging to TensorBoard by default
             self.log('test_{}_loss_MAE'.format(outPro), loss[outPro], on_step=True)
-        return {"pred": outs["energy_U0"].cpu(),
-                "ref": batch["energy_U0"].cpu()}
+            test_result.update({f"pred{outPro}": outs[self.outputPro[outPro]].cpu(),
+                                f"ref{outPro}": y[outPro].cpu()})
+        return test_result
 
     def test_epoch_end(self, outputs):
         # np.save("outputs",outputs)
@@ -231,7 +235,7 @@ class LitNet(pl.LightningModule):
             pred.append([])
             refs.append([])
             for items in outputs:
-                for item1, item2, item3 in zip(items[f"pred{outPro}"], items[f"ref{outPro}"], items[f"idx{outPro}"]):
+                for item1, item2 in zip(items[f"pred{outPro}"], items[f"ref{outPro}"]):
                     pred[outPro].append(item1)
                     refs[outPro].append(item2)
             import matplotlib.pyplot as plt

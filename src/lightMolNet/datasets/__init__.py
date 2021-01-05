@@ -63,7 +63,7 @@ class FileSystemAtomsData(AtomsData):
         if os.path.exists(self.dbpath):
             logger.info(
                 "The database has already been proceed and stored "
-                "at {}. Check your code.".format(self.dbpath)
+                "at {}. Check your code or turn `proceed = False`.".format(self.dbpath)
             )
         elif isinstance(self.filecontextdir, str) and not os.path.exists(self.filecontextdir):
             logger.error(

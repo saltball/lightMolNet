@@ -58,7 +58,8 @@ def cli_main(ckpt_path):
                          logfiledir=r"D:\CODE\PycharmProjects\lightMolNet\examples\logdata",
                          atomref=atomrefs,
                          batch_size=Batch_Size,
-                         pin_memory=True)
+                         pin_memory=True,
+                         proceed=False)
     dataset.prepare_data()
     dataset.setup(data_partial=None)
 
