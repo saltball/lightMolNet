@@ -7,13 +7,12 @@
 # ====================================== #
 
 import torch
-from torch import nn
-
 from lightMolNet import InputPropertiesList
 from lightMolNet.Module.atomcentersymfunc import GaussianSmearing
 from lightMolNet.Module.cutoff import CosineCutoff
 from lightMolNet.Module.interaction import SimpleAtomInteraction
 from lightMolNet.Module.neighbors import AtomDistances
+from torch import nn
 
 
 class SchNet(nn.Module):
@@ -40,6 +39,7 @@ class SchNet(nn.Module):
                  trainable_gaussians: bool = False,
                  distance_expansion: torch.nn.Module = None,
                  # charged_systems: bool = False,
+                 cal_distance=True
                  ):
         super(SchNet, self).__init__()
         # Embeddings for element, each of which is a vector of size (n_atom_embeddings)
@@ -47,7 +47,9 @@ class SchNet(nn.Module):
         self.embeddings = nn.Embedding(max_Z, n_atom_embeddings, padding_idx=0)
 
         # layer for computing inter-atomic distances
-        self.distances = AtomDistances()
+        if cal_distance:
+            self.cal_distance = cal_distance
+            self.distances = AtomDistances()
 
         # layer for expanding inter-atomic distances in a basis
         if distance_expansion is None:
@@ -137,9 +139,12 @@ class SchNet(nn.Module):
         # charged system is not supported.
 
         # compute interatomic distance of every atom to its neighbors
-        r_ij = self.distances(
-            positions, neighbors, cell, cell_offset, neighbor_mask=neighbor_mask
-        )
+        if self.cal_distance:
+            r_ij = self.distances(
+                positions, neighbors, cell, cell_offset, neighbor_mask=neighbor_mask
+            )
+        else:
+            r_ij = inputs[InputPropertiesList.distance]
         # expand interatomic distances (for example, Gaussian smearing)
         f_ij = self.distance_expansion(r_ij)
         # store intermediate representations

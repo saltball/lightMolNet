@@ -73,7 +73,8 @@ def cli_main(ckpt_path):
                          atomref=atomrefs,
                          batch_size=Batch_Size,
                          statistics=False,
-                         pin_memory=True)
+                         pin_memory=True,
+                         proceed=False)
     dataset.prepare_data()
     dataset.setup(data_partial=None)
 

@@ -22,6 +22,7 @@ import numpy as np
 import torch
 from ase.db import connect
 from lightMolNet import Properties
+from lightMolNet.Module.neighbors import atom_distances
 from lightMolNet.environment import collect_atom_triples, SimpleEnvironmentProvider
 from lightMolNet.module_utils import read_deprecated_database
 from tqdm import tqdm
@@ -96,6 +97,7 @@ class AtomsData(torch.utils.data.Dataset):
             environment_provider=SimpleEnvironmentProvider(),
             collect_triples: bool = False,
             centering_function: callable or None = get_center_of_mass,
+            input_with_distance: bool = False,
     ):
         self.dbpath = dbpath
 
@@ -117,6 +119,7 @@ class AtomsData(torch.utils.data.Dataset):
         self.environment_provider = environment_provider
         self.collect_triples = collect_triples
         self.centering_function = centering_function
+        self.input_with_distance = input_with_distance
 
     def get_available_properties(self, available_properties):
         """
@@ -181,6 +184,7 @@ class AtomsData(torch.utils.data.Dataset):
             collect_triples=self.collect_triples,
             centering_function=self.centering_function,
             available_properties=self.available_properties,
+            input_with_distance=self.input_with_distance
         )
 
     def __len__(self):
@@ -348,6 +352,7 @@ class AtomsData(torch.utils.data.Dataset):
             collect_triples=self.collect_triples,
             centering_function=self.centering_function,
             output=properties,
+            input_with_distance=self.input_with_distance
         )
 
         return at, properties
@@ -439,6 +444,7 @@ def _convert_atoms(
         collect_triples=False,
         centering_function=None,
         output=None,
+        input_with_distance=False
 ):
     """
         Helper function to convert ASE atoms object to net input format.
@@ -498,6 +504,14 @@ def _convert_atoms(
         )
         inputs[Properties.neighbor_offsets_k] = torch.LongTensor(
             offset_idx_k.astype(np.int)
+        )
+    if input_with_distance:
+        inputs["distance"] = atom_distances(
+            positions=inputs[Properties.Z],
+            neighbors=inputs[Properties.neighbors],
+            cell=inputs[Properties.cell],
+            cell_offsets=inputs[Properties.cell_offset],
+            neighbor_mask=inputs[Properties.neighbor_mask]
         )
 
     return inputs

@@ -115,6 +115,7 @@ class InputPropertiesList:
     neighbor_mask = 5
     idx = 6
     atom_mask = 7
+    distance = 8
 
     input_list = [
         Properties.Z,
@@ -124,7 +125,8 @@ class InputPropertiesList:
         Properties.neighbors,
         Properties.neighbor_mask,
         "_idx",
-        Properties.atom_mask
+        Properties.atom_mask,
+        "distance"
     ]
 
 
