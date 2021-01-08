@@ -16,4 +16,4 @@ mae_loss_for_metric = F.l1_loss
 
 
 def rsme_loss(input, target, reduction='mean'):
-    return torch.sqrt(mse_loss(input, target, reduction))
+    return torch.sqrt(mse_loss(input, target, reduction=reduction))

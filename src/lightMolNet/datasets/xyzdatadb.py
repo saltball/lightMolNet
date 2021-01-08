@@ -167,8 +167,8 @@ def recursion_xyz_file(rootpath):
             for file in recursion_xyz_file(os.path.join(rootpath, item)):
                 yield file
         elif os.path.isfile(os.path.join(rootpath, item)):
-            if ".xyz" in os.path.splitext(item)[-1]:
+            if os.path.splitext(item)[-1].endswith(".xyz"):
                 yield os.path.join(rootpath, item)
             else:
-                logger.warning("File [{}] is not one '.xyz' file,"
-                               "it has been ignored.".format(os.path.join(rootpath, item)))
+                logger.debug("File [{}] is not one '.xyz' file,"
+                             "it has been ignored.".format(os.path.join(rootpath, item)))
