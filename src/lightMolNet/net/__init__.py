@@ -221,7 +221,7 @@ class LitNet(pl.LightningModule):
                                 f"ref{outPro}": None})
             loss[outPro] = F.mae_loss_for_train(outs[self.outputPro[outPro]], y[outPro])
             # Logging to TensorBoard by default
-            self.log('test_{}_loss_MAE'.format(outPro), loss[outPro], on_step=True)
+            self.log('test_{}_loss_MAE'.format(outPro), loss[outPro], on_step=True, prog_bar=True, logger=True)
             test_result.update({f"pred{outPro}": outs[self.outputPro[outPro]].cpu(),
                                 f"ref{outPro}": y[outPro].cpu()})
         return test_result
