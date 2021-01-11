@@ -2,7 +2,7 @@
 # ====================================== #
 # @Author  : Yanbo Han
 # @Email   : yanbohan98@gmail.com
-# @File    : Atomwise.py
+# @File    : atomwise.py
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 

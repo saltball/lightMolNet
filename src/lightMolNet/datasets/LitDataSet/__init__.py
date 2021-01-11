@@ -9,10 +9,11 @@
 from multiprocessing import cpu_count
 
 import pytorch_lightning as pl
+from torch.utils.data import DataLoader
+
 from lightMolNet.data.dataloader import _collate_aseatoms
 from lightMolNet.data.partitioning import random_split_partial
 from lightMolNet.datasets.statistics import get_statistics
-from torch.utils.data import DataLoader
 
 
 class LitDataSet(pl.LightningDataModule):
@@ -24,7 +25,8 @@ class LitDataSet(pl.LightningDataModule):
             num_workers=cpu_count(),
             pin_memory=False,
             statistics=True,
-            valshuffle=False
+            valshuffle=False,
+            **kwargs
     ):
         if atomref is None:
             raise ValueError("Please define one specific atoms reference use `refatom=`."

@@ -2,17 +2,18 @@
 # ====================================== #
 # @Author  : Yanbo Han
 # @Email   : yanbohan98@gmail.com
-# @File    : SchNet.py
+# @File    : schnet.py
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 
 import torch
+from torch import nn
+
 from lightMolNet import InputPropertiesList
 from lightMolNet.Module.atomcentersymfunc import GaussianSmearing
 from lightMolNet.Module.cutoff import CosineCutoff
 from lightMolNet.Module.interaction import SimpleAtomInteraction
 from lightMolNet.Module.neighbors import AtomDistances
-from torch import nn
 
 
 class SchNet(nn.Module):

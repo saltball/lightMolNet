@@ -6,4 +6,4 @@
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 
-from .SchNet import SchNet
+from .schnet import SchNet

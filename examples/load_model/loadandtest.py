@@ -2,7 +2,7 @@
 # ====================================== #
 # @Author  : Yanbo Han
 # @Email   : yanbohan98@gmail.com
-# @File    : loadandtest.py
+# @File    : loadanduse.py
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 
@@ -11,7 +11,7 @@ import torch
 from ase.units import Hartree
 
 from lightMolNet import Properties
-from lightMolNet.Struct.Atomistic.Atomwise import Atomwise
+from lightMolNet.Struct.Atomistic.atomwise import Atomwise
 from lightMolNet.Struct.nn import SchNet
 from lightMolNet.data.atomsref import get_refatoms
 from lightMolNet.datasets.LitDataSet.G16DataSet import G16DataSet
@@ -72,8 +72,8 @@ def cli_main(ckpt_path):
         # auto_scale_batch_size='binsearch'
     )
 
-    f = open("newpara.txt", "w")
-    print(list(model.named_parameters()), file=f)
+    # f = open("newpara.txt", "w")
+    # print(list(model.named_parameters()), file=f)
 
     result = trainer.test(model, datamodule=dataset, verbose=True)
     print(result)

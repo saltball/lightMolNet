@@ -14,7 +14,7 @@ from ase.units import Hartree
 from ase.visualize import view
 
 from lightMolNet import Properties
-from lightMolNet.Struct.Atomistic.Atomwise import Atomwise
+from lightMolNet.Struct.Atomistic.atomwise import Atomwise
 from lightMolNet.Struct.nn import SchNet
 from lightMolNet.caculator import torchCaculator
 from lightMolNet.data.atomsref import get_refatoms

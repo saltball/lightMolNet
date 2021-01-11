@@ -6,15 +6,16 @@
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 
-import lightMolNet.Module.functional as F
 import numpy as np
 import pytorch_lightning as pl
 import torch
-from lightMolNet import Properties, AtomWiseInputPropertiesList, InputPropertiesList
-from lightMolNet.Struct.Atomistic.Atomwise import Atomwise
-from lightMolNet.Struct.nn.SchNet import SchNet
-from lightMolNet.logger import InfoLogger
 from torch.nn import ModuleList
+
+import lightMolNet.Module.functional as F
+from lightMolNet import Properties, AtomWiseInputPropertiesList, InputPropertiesList
+from lightMolNet.Struct.Atomistic.atomwise import Atomwise
+from lightMolNet.Struct.nn.schnet import SchNet
+from lightMolNet.logger import InfoLogger
 
 logger = InfoLogger(__name__)
 
@@ -53,6 +54,12 @@ class LitNet(pl.LightningModule):
             learning_rate=1e-4,
             datamodule=None,
             representNet=None,
+            n_atom_embeddings=128,
+            n_filters=128,
+            n_interactions=6,
+            cutoff=10,
+            n_gaussians=50,
+            max_Z=18,
             outputNet=None,
             outputPro=None,
             batch_size=None,
@@ -119,12 +126,12 @@ class LitNet(pl.LightningModule):
         for net in representNet:
             self.represent.append(
                 net(
-                    n_atom_embeddings=128,
-                    n_filters=128,
-                    n_interactions=6,
-                    cutoff=10,
-                    n_gaussians=50,
-                    max_Z=18
+                    n_atom_embeddings=n_atom_embeddings,
+                    n_filters=n_filters,
+                    n_interactions=n_interactions,
+                    cutoff=cutoff,
+                    n_gaussians=n_gaussians,
+                    max_Z=max_Z
                 )
             )
 
@@ -132,7 +139,7 @@ class LitNet(pl.LightningModule):
         for index, net in enumerate(outputNet):
             self.output.append(
                 net(
-                    n_in=128,
+                    n_in=n_atom_embeddings,
                     n_out=1,
                     atomref=self.atomref[outputPro[index]],
                     property=outputPro[index],
@@ -207,7 +214,7 @@ class LitNet(pl.LightningModule):
             loss[outPro] = F.mae_loss_for_train(outs[self.outputPro[outPro]], y[outPro])
             # Logging to TensorBoard by default
             self.log('val_{}_loss_MAE'.format(outPro), loss[outPro], on_step=True)
-        return loss.sum()
+        return torch.mean(loss)
 
     def test_step(self, batch, batch_idx):
         batch, y = batch
@@ -221,7 +228,7 @@ class LitNet(pl.LightningModule):
                                 f"ref{outPro}": None})
             loss[outPro] = F.mae_loss_for_train(outs[self.outputPro[outPro]], y[outPro])
             # Logging to TensorBoard by default
-            self.log('test_{}_loss_MAE'.format(outPro), loss[outPro], on_step=True, prog_bar=True, logger=True)
+            self.log('test_{}_loss_MAE'.format(outPro), loss[outPro], on_step=True, on_epoch=True, prog_bar=True, logger=True)
             test_result.update({f"pred{outPro}": outs[self.outputPro[outPro]].cpu(),
                                 f"ref{outPro}": y[outPro].cpu()})
         return test_result
@@ -249,11 +256,17 @@ class LitNet(pl.LightningModule):
 
     def configure_optimizers(self):
         # self.hparams available because we called self.save_hyperparameters()
-        return {"optimizer": self.optimizer,
-                'lr_scheduler': self.scheduler,
-                'monitor': 'val_0_loss_MAE',
-                'interval': 'epoch'
-                }
+        if getattr(self, "scheduler", None) is not None:
+            return {"optimizer": self.optimizer,
+                    'lr_scheduler': self.scheduler,
+                    'monitor': 'val_0_loss_MAE',
+                    'interval': 'epoch'
+                    }
+        else:
+            return {"optimizer": self.optimizer,
+                    'monitor': 'val_0_loss_MAE',
+                    'interval': 'epoch'
+                    }
 
     def todict(self):
         state_dict = self.state_dict()
