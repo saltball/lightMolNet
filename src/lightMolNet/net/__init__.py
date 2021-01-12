@@ -90,7 +90,7 @@ class LitNet(pl.LightningModule):
                     means = self.datamodule.means
         self.means = means
         if self.datamodule is not None and self.means is None:
-            logger.warning("No stddev specified, using means={Properties.energy_U0: 0}.")
+            logger.warning("No means specified, using means={Properties.energy_U0: 0}.")
             self.means = {Properties.energy_U0: 0}
             # raise ValueError("Please specify `mean`.")
 
