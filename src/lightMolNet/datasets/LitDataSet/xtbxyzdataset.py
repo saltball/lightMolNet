@@ -36,9 +36,10 @@ class XtbXyzDataSet(LitDataSet):
         self.xyzfiledir = xyzfiledir
         self.proceed = proceed
 
-    def prepare_data(self, stage=None):
+    def prepare_data(self, stage=None, **kwargs):
         self.dataset = XYZDataDB(dbpath=self.dbpath,
                                  xyzfiledir=self.xyzfiledir,
                                  refatom=self.atomref,
-                                 proceed=self.proceed
+                                 proceed=self.proceed,
+                                 **kwargs
                                  )

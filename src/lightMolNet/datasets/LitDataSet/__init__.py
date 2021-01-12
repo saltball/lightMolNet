@@ -43,13 +43,13 @@ class LitDataSet(pl.LightningDataModule):
         self.valshuffle = valshuffle
         super().__init__()
 
-    def setup(self, stage=None, data_partial=None):
+    def setup(self, stage=None, data_partial=None, split_file_name="split"):
         if data_partial is None:
             data_partial = [60, 20, 20]
         self.train, self.val, self.test = \
             random_split_partial(data=self.dataset,
                                  partial=data_partial,
-                                 split_file="split")
+                                 split_file=split_file_name)
         if self.statistics:
             tmp_dataloader = DataLoader(self.train, batch_size=self.batch_size, collate_fn=_collate_aseatoms, shuffle=True, num_workers=self.num_workers, pin_memory=self.pin_memory)
             means, stddevs = get_statistics(tmp_dataloader,

@@ -12,10 +12,11 @@ import numpy as np
 from ase.atoms import Atoms
 from ase.data import atomic_numbers
 from ase.units import Hartree
+from tqdm import tqdm
+
 from lightMolNet import Properties
 from lightMolNet.datasets import FileSystemAtomsData
 from lightMolNet.logger import DebugLogger
-from tqdm import tqdm
 
 logger = DebugLogger(__name__)
 
@@ -79,18 +80,18 @@ class XYZDataDB(FileSystemAtomsData):
     ):
         if units is None:
             units = XYZDataDB.units
-        available_properties = [
-            XYZDataDB.U0
-        ]
+        if "available_properties" not in kwargs:
+            kwargs["available_properties"] = [
+                XYZDataDB.U0
+            ]
+        self.available_properties = kwargs["available_properties"]
         self.xyzfiledir = xyzfiledir
         self.refatom = refatom
         self.zmax = zmax
-
         super(XYZDataDB, self).__init__(
             dbpath=dbpath,
             filecontextdir=xyzfiledir,
             subset=subset,
-            available_properties=available_properties,
             load_only=load_only,
             units=units,
             collect_triples=collect_triples,
@@ -109,7 +110,8 @@ class XYZDataDB(FileSystemAtomsData):
             subset=subidx,
             load_only=self.load_only,
             units=self.units,
-            collect_triples=self.collect_triples
+            collect_triples=self.collect_triples,
+            available_properties=self.available_properties
         )
 
     def _proceed(self):
