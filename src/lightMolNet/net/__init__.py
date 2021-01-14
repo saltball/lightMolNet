@@ -121,7 +121,7 @@ class LitNet(pl.LightningModule):
         if self.means is None:
             self.means = {i: None for i in self.outputPro}
         if representNet is None:
-            representNet = [SchNet]
+            self.representNet = [SchNet]
         else:
             self.representNet = representNet
 
