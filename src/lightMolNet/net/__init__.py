@@ -111,7 +111,7 @@ class LitNet(pl.LightningModule):
         self.outputNet = outputNet
         if self.outputNet is None:
             self.outputNet = [Atomwise]
-            self.outputPro = {Properties.energy_U0: 0}
+            self.outputPro = [Properties.energy_U0]
         else:
             self.outputNet = outputNet
             self.outputPro = outputPro
