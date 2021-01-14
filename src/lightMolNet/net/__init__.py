@@ -134,7 +134,7 @@ class LitNet(pl.LightningModule):
         self.n_gaussians = n_gaussians
         self.max_Z = max_Z
 
-        for net in representNet:
+        for net in self.representNet:
             self.represent.append(
                 net(
                     n_atom_embeddings=self.n_atom_embeddings,
@@ -147,7 +147,7 @@ class LitNet(pl.LightningModule):
             )
 
         self.represent = ModuleList(self.represent)
-        for index, net in enumerate(outputNet):
+        for index, net in enumerate(self.outputNet):
             self.output.append(
                 net(
                     n_in=self.n_atom_embeddings,
