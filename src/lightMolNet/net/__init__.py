@@ -224,10 +224,10 @@ class LitNet(pl.LightningModule):
         outs = self.forward(batch)
         loss = torch.zeros([Nouts], device=self.device)
         for outPro in range(Nouts):
-            loss[outPro] = F.mae_loss_for_train(outs[self.outputPro[outPro]], y[outPro])
+            loss[outPro] = F.mae_loss_for_metric(outs[self.outputPro[outPro]], y[outPro])
             # Logging to TensorBoard by default
-            self.log('val_{}_loss_MAE'.format(outPro), loss[outPro], on_step=True)
-        return torch.mean(loss)
+            self.log('val_{}_loss_MAE'.format(outPro), loss[outPro], on_step=True, logger=True)
+        return torch.mean(loss).detach()
 
     def test_step(self, batch, batch_idx):
         batch, y = batch
@@ -239,7 +239,7 @@ class LitNet(pl.LightningModule):
         for outPro in range(Nouts):
             test_result.update({f"pred{outPro}": None,
                                 f"ref{outPro}": None})
-            loss[outPro] = F.mae_loss_for_train(outs[self.outputPro[outPro]], y[outPro])
+            loss[outPro] = F.mae_loss_for_metric(outs[self.outputPro[outPro]], y[outPro])
             # Logging to TensorBoard by default
             self.log('test_{}_loss_MAE'.format(outPro), loss[outPro], on_step=True, on_epoch=True, prog_bar=True, logger=True)
             test_result.update({f"pred{outPro}": outs[self.outputPro[outPro]].cpu(),
