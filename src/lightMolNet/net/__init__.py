@@ -210,7 +210,7 @@ class LitNet(pl.LightningModule):
         self.log("lr", self.optimizer.state_dict()['param_groups'][0]['lr'], on_epoch=True)
 
         outs = self.forward(batch)
-        loss = torch.zeros([Nouts])
+        loss = torch.zeros([Nouts], device=self.device)
         for outPro in range(Nouts):
             loss[outPro] = F.mae_loss_for_train(outs[self.outputPro[outPro]], y[outPro])
             # Logging to TensorBoard by default
@@ -222,7 +222,7 @@ class LitNet(pl.LightningModule):
         Nouts = len(self.outputPro)
 
         outs = self.forward(batch)
-        loss = torch.zeros([Nouts])
+        loss = torch.zeros([Nouts], device=self.device)
         for outPro in range(Nouts):
             loss[outPro] = F.mae_loss_for_train(outs[self.outputPro[outPro]], y[outPro])
             # Logging to TensorBoard by default
@@ -234,7 +234,7 @@ class LitNet(pl.LightningModule):
         Nouts = len(self.outputPro)
 
         outs = self.forward(batch)
-        loss = torch.zeros([Nouts])
+        loss = torch.zeros([Nouts], device=self.device)
         test_result = {}
         for outPro in range(Nouts):
             test_result.update({f"pred{outPro}": None,
