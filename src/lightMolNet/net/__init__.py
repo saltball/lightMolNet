@@ -6,15 +6,16 @@
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 
-import lightMolNet.Module.functional as F
 import numpy as np
 import pytorch_lightning as pl
 import torch
+from torch.nn import ModuleList
+
+import lightMolNet.Module.functional as F
 from lightMolNet import Properties, AtomWiseInputPropertiesList, InputPropertiesList
 from lightMolNet.Struct.Atomistic.atomwise import Atomwise
 from lightMolNet.Struct.nn.schnet import SchNet
 from lightMolNet.logger import InfoLogger
-from torch.nn import ModuleList
 
 logger = InfoLogger(__name__)
 
@@ -109,40 +110,30 @@ class LitNet(pl.LightningModule):
 
         ]
         if outputNet is None:
-            self.outputNet = [Atomwise]
-            self.outputPro = {Properties.energy_U0: 0}
-        else:
-            self.outputNet = outputNet
-            self.outputPro = outputPro
+            outputNet = [Atomwise]
+            outputPro = {Properties.energy_U0: 0}
         if self.atomref is None:
-            self.atomref = {i: None for i in self.outputPro}
+            self.atomref = {i: None for i in outputPro}
         if self.stddevs is None:
-            self.stddevs = {i: None for i in self.outputPro}
+            self.stddevs = {i: None for i in outputPro}
         if self.means is None:
-            self.means = {i: None for i in self.outputPro}
+            self.means = {i: None for i in outputPro}
         if representNet is None:
-            representNet = [SchNet]
+            self.representNet = [SchNet]
         else:
             self.representNet = representNet
 
-        self.represent2out = represent2out(len(self.representNet), len(self.outputNet))
-
-        self.n_atom_embeddings = n_atom_embeddings
-        self.n_filters = n_filters
-        self.n_interactions = n_interactions
-        self.cutoff = cutoff
-        self.n_gaussians = n_gaussians
-        self.max_Z = max_Z
+        self.represent2out = represent2out(len(representNet), len(outputNet))
 
         for net in representNet:
             self.represent.append(
                 net(
-                    n_atom_embeddings=self.n_atom_embeddings,
-                    n_filters=self.n_filters,
-                    n_interactions=self.n_interactions,
-                    cutoff=self.cutoff,
-                    n_gaussians=self.n_gaussians,
-                    max_Z=self.max_Z
+                    n_atom_embeddings=n_atom_embeddings,
+                    n_filters=n_filters,
+                    n_interactions=n_interactions,
+                    cutoff=cutoff,
+                    n_gaussians=n_gaussians,
+                    max_Z=max_Z
                 )
             )
 
@@ -150,12 +141,12 @@ class LitNet(pl.LightningModule):
         for index, net in enumerate(outputNet):
             self.output.append(
                 net(
-                    n_in=self.n_atom_embeddings,
+                    n_in=n_atom_embeddings,
                     n_out=1,
-                    atomref=self.atomref[self.outputPro[index]],
-                    property=self.outputPro[index],
-                    mean=self.means[self.outputPro[index]],
-                    stddev=self.stddevs[self.outputPro[index]]
+                    atomref=self.atomref[outputPro[index]],
+                    property=outputPro[index],
+                    mean=self.means[outputPro[index]],
+                    stddev=self.stddevs[outputPro[index]]
                 )
             )
         self.output = ModuleList(self.output)
@@ -166,6 +157,7 @@ class LitNet(pl.LightningModule):
                 self.optimizer,
                 **schedulerpara
             )
+        self.outputPro = outputPro
 
     def forward(
             self,
