@@ -23,7 +23,7 @@ logger = DebugLogger(__name__)
 Add_Batch = 10000
 
 
-def simple_read_xyz_xtb(fileobj, index=None):
+def simple_read_xyz_xtb(fileobj, index=None, read_comment=True):
     lines = fileobj.readlines()
     natoms = int(lines[0])
     nimages = len(lines) // (natoms + 2)
@@ -33,7 +33,14 @@ def simple_read_xyz_xtb(fileobj, index=None):
         symbols = []
         positions = []
         n = i * (natoms + 2) + 2
-        comments = dict(energy=float(lines[n - 1].split()[1]))
+        if read_comment:
+            try:
+                comments = dict(energy=float(lines[n - 1].split()[1]))
+            except IndexError:
+                if not len(lines[n - 1].split()):
+                    raise Exception(f"Comments not recognizable: {lines[n - 1]}.\n Try to set `read_comment=False`.")
+        else:
+            comments = {}
         for line in lines[n:n + natoms]:
             symbol, x, y, z = line.split()[:4]
             symbol = symbol.lower().capitalize()
