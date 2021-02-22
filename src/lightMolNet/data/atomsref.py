@@ -56,7 +56,7 @@ def get_refatoms(refat: dict, properties: str or list or tuple = None, z_max=118
     """
     if properties is None:
         properties = (Properties.energy_U0,)
-    elif type(properties) is str:
+    elif isinstance(properties, str):
         properties = (properties,)
     else:
         raise TypeError("Type {} is not supported for refatom properties input.".format(type(properties)))

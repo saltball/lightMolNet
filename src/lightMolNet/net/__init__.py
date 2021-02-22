@@ -6,15 +6,16 @@
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
 
-import lightMolNet.Module.functional as F
 import numpy as np
 import pytorch_lightning as pl
 import torch
+from torch.nn import ModuleList
+
+import lightMolNet.Module.functional as F
 from lightMolNet import Properties, AtomWiseInputPropertiesList, InputPropertiesList
 from lightMolNet.Struct.Atomistic.atomwise import Atomwise
 from lightMolNet.Struct.nn.schnet import SchNet
 from lightMolNet.logger import InfoLogger
-from torch.nn import ModuleList
 
 logger = InfoLogger(__name__)
 
@@ -47,7 +48,6 @@ class represent2out(torch.nn.Module):
 
 
 class LitNet(pl.LightningModule):
-
     def __init__(
             self,
             learning_rate=1e-4,
@@ -67,6 +67,28 @@ class LitNet(pl.LightningModule):
             stddevs=None,
             scheduler=None
     ):
+        """
+
+        Parameters
+        ----------
+        learning_rate
+        datamodule
+        representNet
+        n_atom_embeddings
+        n_filters
+        n_interactions
+        cutoff
+        n_gaussians
+        max_Z
+        outputNet
+        outputPro
+        batch_size
+        atomref
+        means
+        stddevs
+        scheduler
+
+        """
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         super().__init__()
