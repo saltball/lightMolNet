@@ -54,8 +54,8 @@ def cli_main(ckpt_path):
     model.load_state_dict(state_dict["state_dict"])
     model.freeze()
 
-    dataset = G16DataSet(dbpath="fullerxtb.db",
-                         logfiledir=r"D:\CODE\PycharmProjects\lightMolNet\examples\logdata",
+    dataset = G16DataSet(dbpath=r"E:\archive\DATASETS\FullereneDB\fullerxtbdata20to88.db",
+                         # logfiledir=r"D:\CODE\PycharmProjects\lightMolNet\examples\logdata",
                          atomref=atomrefs,
                          batch_size=Batch_Size,
                          pin_memory=True,
@@ -80,4 +80,4 @@ def cli_main(ckpt_path):
 
 
 if __name__ == '__main__':
-    cli_main(r"D:\CODE\PycharmProjects\lightMolNet\examples\load_model\lightning_logs\version_4\checkpoints\FullNet-epoch=2721-val_loss=0.0000.ckpt")
+    cli_main(r"E:\#Projects\#Research\0109-xtbfuller-SchNet-baseline-1\output\checkpoints\FullNet-epoch=22-val_loss=0.0000.ckpt")

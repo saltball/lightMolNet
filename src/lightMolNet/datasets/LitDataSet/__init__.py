@@ -28,9 +28,9 @@ class LitDataSet(pl.LightningDataModule):
             valshuffle=False,
             **kwargs
     ):
-        if atomref is None:
-            raise ValueError("Please define one specific atoms reference use `refatom=`."
-                             "You can check `lightMolNet.data.atomsref` for details.")
+        # if atomref is None:
+        #     raise ValueError("Please define one specific atoms reference use `refatom=`."
+        #                      "You can check `lightMolNet.data.atomsref` for details.")
         self.batch_size = batch_size
         self.dbpath = dbpath
         self.atomref = atomref

@@ -39,6 +39,7 @@ class FileSystemAtomsData(AtomsData):
             collect_triples=False,
             centering_function=get_center_of_mass,
             proceed=False,
+            force_proceed=False
     ):
         self.filecontextdir = filecontextdir
         super().__init__(dbpath=dbpath,
@@ -53,7 +54,13 @@ class FileSystemAtomsData(AtomsData):
             if not os.path.exists(dbpath):
                 logger.error(f"Database file {dbpath} is not exist. Please Check.")
         elif proceed:
-            self.proceed()
+            if not force_proceed:
+                self.proceed()
+            else:
+                logger.warning("Force rewrite dbfile. Check `force_proceed`.")
+                if os.path.exists(self.dbpath):
+                    os.remove(self.dbpath)
+                self._proceed()
 
     def proceed(self):
         """
@@ -63,7 +70,8 @@ class FileSystemAtomsData(AtomsData):
         if os.path.exists(self.dbpath):
             logger.info(
                 "The database has already been proceed and stored "
-                "at {}. Check your code or turn `proceed = False`.".format(self.dbpath)
+                "at {}. Check your code or turn `proceed = False`."
+                "No data changed in dbfile.".format(self.dbpath)
             )
         elif isinstance(self.filecontextdir, str) and not os.path.exists(self.filecontextdir):
             logger.error(
