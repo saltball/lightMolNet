@@ -43,7 +43,8 @@ class LitPhysNet(pl.LightningModule):
             Escale=1.0,  # initial value for output energy scale (makes convergence faster)
             Qshift=0.0,  # initial value for output charge shift
             Qscale=1.0,  # initial value for output charge scale
-            scheduler=None
+            scheduler=None,
+            atomref=None,
     ):
         """
 
@@ -95,6 +96,7 @@ class LitPhysNet(pl.LightningModule):
             Escale=Escale,  # initial value for output energy scale (makes convergence faster)
             Qshift=Qshift,  # initial value for output charge shift
             Qscale=Qscale,  # initial value for output charge scale
+            atomref=atomref,
         )
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.learning_rate)

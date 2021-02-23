@@ -5,16 +5,22 @@
 # @File    : physnet.py
 # ALL RIGHTS ARE RESERVED UNLESS STATED.
 # ====================================== #
+from functools import partial
+
+import numpy as np
 import torch
 from torch import nn
+from torch.nn.init import constant_, orthogonal_
 
-from lightMolNet import InputPropertiesList
+from lightMolNet import InputPropertiesList, Properties
 from lightMolNet.Module.activations import shifted_softplus
 from lightMolNet.Module.cutoff import RBFCutoff
 from lightMolNet.Module.interaction import AtomInteractionWithResidual
 from lightMolNet.Module.neighbors import AtomDistances
 from lightMolNet.Module.residual import ResidualLayer
 from lightMolNet.Module.util import Dense
+
+zeros_initializer = partial(constant_, val=0.0)
 
 
 class PhysNet(nn.Module):
@@ -51,6 +57,7 @@ class PhysNet(nn.Module):
                  Escale=1.0,  # initial value for output energy scale (makes convergence faster)
                  Qshift=0.0,  # initial value for output charge shift
                  Qscale=1.0,  # initial value for output charge scale
+                 atomref=None
                  ):
         super(PhysNet, self).__init__()
         self._n_atom_embeddings = n_atom_embeddings
@@ -68,6 +75,14 @@ class PhysNet(nn.Module):
         self.register_buffer("Escale", Escale * torch.ones(1))
         self.register_buffer("Qshift", Qshift * torch.ones(1))
         self.register_buffer("Qscale", Qscale * torch.ones(1))
+
+        if atomref is not None:
+            self._atom_ref_energy = nn.Embedding.from_pretrained(
+                torch.from_numpy(atomref[Properties.energy_U0].astype(np.float32))
+            )
+            # TODO:More atom refs.
+        else:
+            self._atom_ref = None
 
         self._cal_distance = cal_distance
         self._use_electrostatic = use_electrostatic
@@ -179,6 +194,11 @@ class PhysNet(nn.Module):
         if self._use_dispersion:
             raise NotImplementedError
         D = 0
+
+        # atom ref from calculations
+        if self._atom_ref_energy is not None:
+            Ei = self._atom_ref_energy(atomic_numbers).squeeze(-1)
+            Ea = Ea + Ei
         return torch.einsum("bi->b", Ea).view(-1, 1), D
 
     def _switch(self, Dij):
@@ -230,12 +250,6 @@ class PhysNet(nn.Module):
     @property
     def kehalf(self):
         return self._kehalf
-
-
-from functools import partial
-from torch.nn.init import constant_, orthogonal_
-
-zeros_initializer = partial(constant_, val=0.0)
 
 
 class PhysNetOutputBlock(nn.Module):
