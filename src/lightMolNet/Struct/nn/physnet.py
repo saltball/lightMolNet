@@ -179,7 +179,7 @@ class PhysNet(nn.Module):
         if self._use_dispersion:
             raise NotImplementedError
         D = 0
-        return Ea.sum(-1), D
+        return torch.einsum("bi->b", Ea).view(-1, 1), D
 
     def _switch(self, Dij):
         D = Dij

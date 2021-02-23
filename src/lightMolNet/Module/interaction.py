@@ -207,7 +207,7 @@ class AtomInteractionWithResidual(nn.Module):
 
         nbh_size = neighbor.size()
         nbh = neighbor.view(-1, nbh_size[1] * nbh_size[2], 1).expand(-1, -1, xa.size(2))
-        xj = torch.gather(xa, 1, nbh).view(nbh_size[0], nbh_size[1], nbh_size[2], -1)
+        xj = torch.gather(self.dense_j(xa), 1, nbh).view(nbh_size[0], nbh_size[1], nbh_size[2], -1)
         xj = xj * g
         xj = self.agg(xj)
         # TODO:test

@@ -130,7 +130,7 @@ class LitPhysNet(pl.LightningModule):
         self.log("lr", self.optimizer.state_dict()['param_groups'][0]['lr'], on_epoch=True)
 
         outs = self.forward(batch)
-        loss = F.mae_loss_for_train(outs[0][:, None], y[0])
+        loss = F.mae_loss_for_train(outs[0], y[0])
         # Logging to TensorBoard by default
         self.log('train_{}_loss_MAE'.format(0), loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return torch.mean(loss)
