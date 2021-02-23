@@ -9,11 +9,15 @@
 from functools import partial
 
 import torch
+# ones_initializer = partial(constant_, val=1.0)
+from torch import nn
+from torch.nn.init import orthogonal_
+
 from lightMolNet.Module.activations import shifted_softplus
 from lightMolNet.Module.convolution import CFConv
 from lightMolNet.Module.cutoff import CosineCutoff
-from lightMolNet.Module.util import Dense
-from torch import nn
+from lightMolNet.Module.residual import ResidualLayer
+from lightMolNet.Module.util import Dense, Aggregate
 
 shifted_softplus = partial(shifted_softplus, shift=2)
 
@@ -129,3 +133,100 @@ class SimpleAtomInteraction(nn.Module):
         v = self.cfconv(x, r_ij, neighbors, neighbor_mask, f_ij)
         v = self.dense(v)
         return v
+
+
+class AtomInteractionWithResidual(nn.Module):
+    r"""simple interaction layers for modeling interactions of atomistic systems.
+
+        Args
+        ----
+            n_atom_embeddings:int
+                number of features to describe atomic environments.
+            n_basis:int
+                number of rbf or any other basis as expanded input.
+            n_residual_atomic:int
+                number of residual layers for atomics.
+            num_residual_interaction:int
+                number of residual layers for interaction.
+            activation_fn:nn.Module
+                activation function for calculating proceeds.
+
+        References
+        ----------
+        .. [#physnet] Unke, O. T. and Meuwly, M. "PhysNet: A Neural Network for Predicting Energies,
+                      Forces, Dipole Moments and Partial Charges" arxiv:1902.08408 (2019).
+        """
+
+    def __init__(self, n_atom_embeddings, n_basis, n_residual_atomic, num_residual_interaction, activation_fn=None):
+        super(AtomInteractionWithResidual, self).__init__()
+        self._n_atom_embeddings = n_atom_embeddings
+        self._n_basis = n_basis
+        self.activation_fn = activation_fn
+
+        self.k2f = Dense(self.n_basis, self.n_atom_embeddings, bias=False)
+        self.dense_i = Dense(self.n_atom_embeddings, self.n_atom_embeddings, activation=activation_fn,
+                             weight_init=orthogonal_)
+        self.dense_j = Dense(self.n_atom_embeddings, self.n_atom_embeddings, activation=activation_fn,
+                             weight_init=orthogonal_)
+        self.interact_res = nn.Sequential(*
+                                          [
+                                              ResidualLayer(self.n_atom_embeddings,
+                                                            self.n_atom_embeddings,
+                                                            activation=activation_fn
+                                                            )
+                                              for _ in range(num_residual_interaction)
+                                          ]
+                                          )
+        self.dense_interact = Dense(self.n_atom_embeddings, self.n_atom_embeddings, weight_init=orthogonal_)
+        self.u_gate = nn.Parameter(torch.ones(n_atom_embeddings))
+        self.atom_res = nn.Sequential(*
+                                      [
+                                          ResidualLayer(self.n_atom_embeddings,
+                                                        self.n_atom_embeddings,
+                                                        activation=activation_fn
+                                                        )
+                                          for _ in range(n_residual_atomic)
+                                      ]
+                                      )
+        self.agg = Aggregate(
+            axis=2
+        )
+
+    def forward(self, x, rbf, neighbor):
+
+        # interaction part
+        # pre-activation
+        if self.activation_fn is not None:
+            xa = self.activation_fn(x)
+        else:
+            xa = x
+        # feature from radial basis functions
+        g = self.k2f(rbf)
+        # calculate contribution of neighbors and central atom
+        xi = self.dense_i(xa)
+
+        nbh_size = neighbor.size()
+        nbh = neighbor.view(-1, nbh_size[1] * nbh_size[2], 1).expand(-1, -1, xa.size(2))
+        xj = torch.gather(xa, 1, nbh).view(nbh_size[0], nbh_size[1], nbh_size[2], -1)
+        xj = xj * g
+        xj = self.agg(xj)
+        # TODO:test
+        m = xi + xj
+        if len(self.interact_res) > 0:
+            m = self.interact_res(m)
+        if self.activation_fn is not None:
+            m = self.activation_fn(m)
+        x = self.u_gate * x + self.dense_interact(m)
+        # interaction part end
+        # atom res part
+        if len(self.atom_res) > 0:
+            x = self.atom_res(x)
+        return x
+
+    @property
+    def n_basis(self):
+        return self._n_basis
+
+    @property
+    def n_atom_embeddings(self):
+        return self._n_atom_embeddings

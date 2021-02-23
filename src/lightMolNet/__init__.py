@@ -116,6 +116,7 @@ class InputPropertiesList:
     idx = 6
     atom_mask = 7
     distance = 8
+    totcharge = 9
 
     input_list = [
         Properties.Z,
@@ -126,14 +127,17 @@ class InputPropertiesList:
         Properties.neighbor_mask,
         "_idx",
         Properties.atom_mask,
-        "distance"
+        "distance",
+        Properties.charges
     ]
 
 
 class InputPropertiesList_y:
     energy_U0 = 0
+    dipole_moment = 1
     input_list = [
-        Properties.energy_U0
+        Properties.energy_U0,
+        Properties.dipole_moment
     ]
 
 

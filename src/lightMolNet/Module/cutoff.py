@@ -84,10 +84,10 @@ class RBFCutoff(nn.Module):
         super().__init__()
         self._n_rbf_basis = n_rbf_basis
         self._cutoff = cutoff
-        centers = torch.linspace(1.0, np.exp(-self.cutoff), self.n_rbf_basis)
-        width = torch.FloatTensor((0.5 / ((1.0 - np.exp(-self.cutoff)) / self.n_rbf_basis),)) ** 2
-        self.width = nn.Parameter(width)  # (1,)
-        self.centers = nn.Parameter(centers)  # (n_rbf_basis,)
+        centers = np.linspace(1.0, np.exp(-self.cutoff), self.n_rbf_basis)
+        width = np.array((0.5 / ((1.0 - np.exp(-self.cutoff)) / self.n_rbf_basis))) ** 2
+        self.width = nn.Parameter(torch.Tensor((width,)))  # (1,)
+        self.centers = nn.Parameter(torch.Tensor(centers))  # (n_rbf_basis,)
 
     def forward(self, D):
         # D (nbatch,nat,nbh)

@@ -10,6 +10,11 @@ from torch import nn
 
 from lightMolNet import InputPropertiesList
 from lightMolNet.Module.activations import shifted_softplus
+from lightMolNet.Module.cutoff import RBFCutoff
+from lightMolNet.Module.interaction import AtomInteractionWithResidual
+from lightMolNet.Module.neighbors import AtomDistances
+from lightMolNet.Module.residual import ResidualLayer
+from lightMolNet.Module.util import Dense
 
 
 class PhysNet(nn.Module):
@@ -56,18 +61,44 @@ class PhysNet(nn.Module):
         self._n_residual_interaction = n_residual_interaction
         self._n_residual_output = n_residual_output
         self._max_Z = max_Z
-        self._activation_fn = activation_fn
+        self.activation_fn = activation_fn
         self._kehalf = kehalf
+
+        self.register_buffer("Eshift", Eshift * torch.ones(1))
+        self.register_buffer("Escale", Escale * torch.ones(1))
+        self.register_buffer("Qshift", Qshift * torch.ones(1))
+        self.register_buffer("Qscale", Qscale * torch.ones(1))
 
         self._cal_distance = cal_distance
         self._use_electrostatic = use_electrostatic
         self._use_dispersion = use_dispersion
 
         # define blocks and layers
-        self._embeddings = nn.Embedding(max_Z, n_atom_embeddings, padding_idx=0)
-        self._rbf_layer
-        self._interaction_block
-        self._output_block
+        self.embeddings = nn.Embedding(max_Z, n_atom_embeddings, padding_idx=0)
+        self.distance_layer = AtomDistances()
+        self.rbf_layer = RBFCutoff(self.n_rbf_basis, self._cutoff)
+        self.interaction_block = nn.ModuleList(
+            [
+                AtomInteractionWithResidual(
+                    self.n_atom_embeddings,
+                    self.n_rbf_basis,
+                    self.n_residual_atomic,
+                    self.n_residual_interaction,
+                    activation_fn=self.activation_fn
+                )
+                for _ in range(self.n_blocks)
+            ]
+        )
+        self.output_block = nn.ModuleList(
+            [
+                PhysNetOutputBlock(
+                    n_atom_embeddings=self.n_atom_embeddings,
+                    n_residual_output=self._n_residual_output,
+                    activation_fn=activation_fn
+                )
+                for _ in range(self.n_blocks)
+            ]
+        )
 
     def forward(self, inputs: list):
         """Compute atomic representations/embeddings.
@@ -99,16 +130,65 @@ class PhysNet(nn.Module):
         # get tensors from input dictionary
         atomic_numbers = inputs[InputPropertiesList.Z]
         positions = inputs[InputPropertiesList.R]
-        cell = inputs[InputPropertiesList.cell]
-        cell_offset = inputs[InputPropertiesList.cell_offset]
+        # cell = inputs[InputPropertiesList.cell]
+        # cell_offset = inputs[InputPropertiesList.cell_offset]
         neighbors = inputs[InputPropertiesList.neighbors]
         neighbor_mask = inputs[InputPropertiesList.neighbor_mask]
+        total_charge = inputs[InputPropertiesList.totcharge]
+        if total_charge is None:
+            total_charge = 0
 
-        Ea, Qa, Dij_lr = self.atomic_properties(atomic_numbers,
-                                                positions,
-                                                )
+        Dij = self.distance_layer(positions,
+                                  neighbors,
+                                  neighbor_mask=neighbor_mask)
 
-        return x
+        rbf = self.rbf_layer(Dij)
+        x = self.embeddings(atomic_numbers)
+        Ea = 0
+        Qa = 0
+        for i in range(self.n_blocks):
+            x = self.interaction_block[i](x, rbf, neighbors)
+            out = self.output_block[i](x)
+            Ea = Ea + out[:, :, 0]
+            Qa = Qa + out[:, :, 1]
+            # out2=out**2
+
+        Ea = self.Escale * Ea + \
+             self.Eshift + \
+             0 * torch.zeros_like(positions.sum(-1))
+        Qa = self.Qscale * Qa + self.Qshift
+
+        # scaled_charges
+        Na = torch.sum(torch.where(atomic_numbers > 0, torch.ones_like(atomic_numbers), torch.zeros_like(atomic_numbers)), dim=1)
+        Qa = Qa + (total_charge - torch.sum(Qa, dim=-1, keepdim=True)) / Na[:, None]
+
+        if self._use_electrostatic:
+            Qi = Qa[:, :, None]
+            n_batch = Qa.size()[0]
+            idx_m = torch.arange(n_batch,
+                                 device=Qa.device,
+                                 dtype=torch.long)[:, None, None]
+            Qj = Qa[idx_m, neighbors[:, :, :]]
+            switch = self._switch(Dij)
+            cswitch = 1 - switch
+            Eele_ordinary = torch.where(neighbor_mask == 1, 1 / Dij, torch.zeros_like(Dij))
+            Eele_shielded = 1 / torch.sqrt(Dij * Dij + 1)
+            Eele = self.kehalf * torch.einsum("bij,bij->bi", Qi * Qj, (cswitch * Eele_shielded + switch * Eele_ordinary))
+            # TODO:test and verify
+            Ea = Ea + Eele
+        if self._use_dispersion:
+            raise NotImplementedError
+        D = 0
+        return Ea.sum(-1), D
+
+    def _switch(self, Dij):
+        D = Dij
+        cut = self.cutoff / 2
+        Dr = D / cut
+        D3 = Dr * Dr * Dr
+        D4 = D3 * Dr
+        D5 = D4 * Dr
+        return torch.where(Dij < cut, 6 * D5 - 15 * D4 + 10 * D3, torch.ones_like(Dij))
 
     @property
     def n_atom_embeddings(self):
@@ -143,25 +223,47 @@ class PhysNet(nn.Module):
         return self._max_Z
 
     @property
-    def activation_fn(self):
-        return self._activation_fn
+    def distance_layer(self):
+        # TODO:calculate or not wrapper.
+        return self._distance_layer
 
     @property
     def kehalf(self):
         return self._kehalf
 
-    @property
-    def embeddings(self):
-        return self._embeddings
 
-    @property
-    def rbf_layer(self):
-        return self._rbf_layer
+from functools import partial
+from torch.nn.init import constant_, orthogonal_
 
-    @property
-    def interaction_block(self):
-        return self._interaction_block
+zeros_initializer = partial(constant_, val=0.0)
 
-    @property
-    def output_block(self):
-        return self._output_block
+
+class PhysNetOutputBlock(nn.Module):
+    def __init__(self, n_atom_embeddings, n_residual_output, activation_fn):
+        super(PhysNetOutputBlock, self).__init__()
+        self.n_atom_embeddings = n_atom_embeddings
+        self.n_residual_output = n_residual_output
+        self.activation_fn = activation_fn
+
+        self._res_layer = nn.Sequential(*
+                                        [
+                                            ResidualLayer(
+                                                self.n_atom_embeddings,
+                                                self.n_atom_embeddings,
+                                                activation=activation_fn,
+                                                bias=True
+                                            )
+                                            for _ in range(self.n_residual_output)
+                                        ]
+                                        )
+        self._dense = Dense(in_features=self.n_atom_embeddings,
+                            out_features=2,
+                            bias=False,
+                            weight_init=orthogonal_
+                            )
+
+    def forward(self, x):
+        x = self._res_layer(x)
+        if self.activation_fn is not None:
+            x = self.activation_fn(x)
+        return self._dense(x)

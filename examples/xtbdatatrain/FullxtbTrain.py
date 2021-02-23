@@ -12,7 +12,7 @@ from ase.units import eV
 
 from lightMolNet import Properties
 from lightMolNet.Struct.Atomistic.atomwise import Atomwise
-from lightMolNet.Struct.nn import SchNet
+from lightMolNet.Struct.nn import schnet
 from lightMolNet.data.atomsref import get_refatoms
 from lightMolNet.datasets.LitDataSet.xtbxyzdataset import XtbXyzDataSet
 from lightMolNet.logger import DebugLogger
@@ -64,7 +64,7 @@ def cli_main(ckpt_path=None, schnetold=False):
                  }
     model = LitNet(learning_rate=1e-5,
                    datamodule=dataset,
-                   representNet=[SchNet],
+                   representNet=[schnet],
                    outputNet=[Atomwise],
                    outputPro=[Properties.energy_U0],
                    batch_size=Batch_Size,
