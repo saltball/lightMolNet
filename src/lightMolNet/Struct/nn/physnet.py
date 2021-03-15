@@ -82,7 +82,7 @@ class PhysNet(nn.Module):
             )
             # TODO:More atom refs.
         else:
-            self._atom_ref = None
+            self._atom_ref_energy = None
 
         self._cal_distance = cal_distance
         self._use_electrostatic = use_electrostatic

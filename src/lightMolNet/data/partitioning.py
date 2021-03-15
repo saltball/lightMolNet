@@ -9,8 +9,9 @@
 import os
 
 import numpy as np
-from lightMolNet.logger import DebugLogger
 from torch.utils.data import random_split
+
+from lightMolNet.logger import DebugLogger
 
 logger = DebugLogger(__name__)
 
@@ -49,7 +50,7 @@ def random_split_partial(
         n_train = int(partial[0])
         n_val = int(partial[1])
         n_test = n - n_train - n_val
-        logger.debug(f"Data will divided to [train:val:test]={num_train}:{num_val}:{num_test}")
+        logger.debug(f"Data will divided to [train:val:test]={n_train}:{n_val}:{n_test}")
         train_idx, val_idx, test_idx = random_split(
             range(n),
             [

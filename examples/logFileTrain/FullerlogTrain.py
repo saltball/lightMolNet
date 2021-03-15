@@ -12,7 +12,7 @@ from ase.units import Hartree
 
 from lightMolNet import Properties
 from lightMolNet.Struct.Atomistic.atomwise import Atomwise
-from lightMolNet.Struct.nn import SchNet
+from lightMolNet.Struct.nn.schnet import SchNet
 from lightMolNet.data.atomsref import get_refatoms
 from lightMolNet.datasets.LitDataSet.G16DataSet import G16DataSet
 from lightMolNet.net import LitNet
@@ -31,7 +31,7 @@ refat_b3lypgd3 = {Properties.UNIT: {Properties.energy_U0: Hartree},
 atomrefs = get_refatoms(refat_b3lypgd3, Properties.energy_U0, z_max=18)
 
 
-def cli_main():
+def cli_main(ckpt_path, schnetold=False):
     from pytorch_lightning.callbacks import ModelCheckpoint
     checkpoint_callback = ModelCheckpoint(
         monitor='val_0_loss_MAE',
@@ -61,6 +61,39 @@ def cli_main():
                    outputPro=[Properties.energy_U0],
                    batch_size=Batch_Size,
                    scheduler=scheduler)
+    if ckpt_path is not None:
+        from collections import OrderedDict
+        state_dict = torch.load(ckpt_path)
+        new_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            name = k
+            if "represent" in k:
+                if "embedding" in k:
+                    name = ".".join(["represent.0.embeddings", *k.split(".")[2:]])
+                else:
+                    name = ".".join(["represent.0", *k.split(".")[1:]])
+                if k == "representation.embedding.weight":
+                    v = v[:18, :]
+            elif "outputU0" in k:
+                if 'outputU0.atomref.weight' in k:
+                    name = "output.0.atomref.weight"
+                    v = torch.Tensor(atomrefs["energy_U0"])
+                elif 'standardize.mean' in k:
+                    name = "output.0.standardize.mean"
+                    v = v * 0
+                elif 'standardize.stddev' in k:
+                    name = "output.0.standardize.stddev"
+                    v = v / v
+                elif 'out_net' in k:
+                    name = ".".join(["output.0.out_net", *k.split(".")[2:]])
+
+            new_state_dict[name] = v
+        if schnetold:
+            model.load_state_dict(new_state_dict)
+        else:
+            model.load_state_dict(state_dict["state_dict"])
+
+        # model.freeze()
     trainer = pl.Trainer(
         callbacks=[checkpoint_callback],
         gpus=USE_GPU,
@@ -71,7 +104,7 @@ def cli_main():
     )
 
     ### train
-    trainer.fit(model)
+    # trainer.fit(model)
 
     ### scale_batch
     # trainer.tune(model)
@@ -86,4 +119,4 @@ def cli_main():
 
 
 if __name__ == '__main__':
-    cli_main()
+    cli_main(r"D:\CODE\PycharmProjects\lightMolNet\examples\xtbdatatrain\torchNet.pt", schnetold=True)

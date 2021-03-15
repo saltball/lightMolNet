@@ -92,3 +92,13 @@ class LitDataSet(pl.LightningDataModule):
             num_workers=self.num_workers,
             pin_memory=self.pin_memory
         )
+
+    def _all_dataloader(self):
+        return DataLoader(
+            self.dataset,
+            batch_size=self.batch_size,
+            collate_fn=_collate_aseatoms,
+            shuffle=False,
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory
+        )
