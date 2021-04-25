@@ -100,3 +100,11 @@ def _collate_aseatoms(examples):
         elif pn in InputPropertiesList.input_list:
             batch_list[InputPropertiesList.input_list.index(pn)] = batch[pn]
     return batch_list, properties_list
+
+
+def _collate_aseatoms_with_cuda(examples):
+    batch_list, properties_list = _collate_aseatoms(examples)
+    for idx, k in enumerate(batch_list):
+        if k is not None:
+            batch_list[idx] = k[:].to(device="cuda")
+    return batch_list, properties_list

@@ -190,14 +190,14 @@ class ScaleShift(nn.Module):
 
     """
 
-    def __init__(self, mean, stddev, learnable=True):
+    def __init__(self, mean=(0.), stddev=(1.), learnable=True):
         super(ScaleShift, self).__init__()
         if not learnable:
             self.register_buffer("mean", mean)
             self.register_buffer("stddev", stddev)
         else:
-            self.mean = Parameter(torch.Tensor([0]))
-            self.stddev = Parameter(torch.Tensor([1]))
+            self.mean = Parameter(torch.Tensor([mean]))
+            self.stddev = Parameter(torch.Tensor([stddev]))
 
     def forward(self, input):
         """Compute layer output.

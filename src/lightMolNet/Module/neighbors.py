@@ -159,3 +159,40 @@ class AtomDistances(nn.Module):
             normalize_vecs=True,
             neighbor_mask=neighbor_mask,
         )
+
+
+def distance_matrix(positions, return_vecs=False):
+    n_batch = positions.size()[0]
+    atoms = positions.size()[1]
+    idx_m = torch.arange(n_batch,
+                         device=positions.device,
+                         dtype=torch.long)[:, None, None]
+    # Get indices of neighboring atom positions
+    # pos_xyz = positions[idx_m, torch.stack([torch.stack([torch.arange(positions.size()[1],
+    #                                                     device=positions.device,
+    #                                                     dtype=torch.long) for _ in range(positions.size()[1])]
+    #                                        )  for _ in range(n_batch)]), :]
+    pos_xyz = positions[idx_m, torch.ones([n_batch, atoms, atoms], device=positions.device, dtype=int) * torch.arange(atoms,
+                                                                                                                      device=positions.device,
+                                                                                                                      dtype=torch.long), :]
+    # Subtract positions of central atoms to get distance vectors
+    dist_vec = pos_xyz - positions[:, :, None, :]
+    distances = torch.norm(dist_vec, 2, 3)
+    if not return_vecs:
+        return distances
+    else:
+        return distances, dist_vec / ((distances + 0.00001)[:, :, :, None])
+
+
+if __name__ == '__main__':
+    pos = torch.Tensor([
+        [[0, 0, 0],
+         [1, 1, 1],
+         [-1, -1, 1],
+         [-1, 1, -1]],
+        [[0, 0, 0],
+         [50, 50, 50],
+         [-50, -50, -50],
+         [-1, 1, -1]]
+    ])
+    print(distance_matrix(pos, return_vecs=True))

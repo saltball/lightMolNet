@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader
 
 from lightMolNet.data.dataloader import _collate_aseatoms
 from lightMolNet.data.partitioning import random_split_partial
+from lightMolNet.datasets.dbdirect import DBData
 from lightMolNet.datasets.statistics import get_statistics
 
 
@@ -26,6 +27,7 @@ class LitDataSet(pl.LightningDataModule):
             pin_memory=False,
             statistics=True,
             valshuffle=False,
+            use_gpu="cuda",
             **kwargs
     ):
         # if atomref is None:
@@ -41,6 +43,7 @@ class LitDataSet(pl.LightningDataModule):
         self.stddevs = None
         self.dataset = None
         self.valshuffle = valshuffle
+        self.use_gpu = use_gpu
         super().__init__()
 
     def setup(self, stage=None, data_partial=None, split_file_name="split"):
@@ -63,42 +66,80 @@ class LitDataSet(pl.LightningDataModule):
     def prepare_data(self):
         raise NotImplementedError(f"Method `prepare_data()` must be implemented for instance of class `{self.__class__}`")
 
-    def train_dataloader(self):
+    def train_dataloader(self, collate_fn=_collate_aseatoms):
         return DataLoader(
             self.train,
             batch_size=self.batch_size,
-            collate_fn=_collate_aseatoms,
+            collate_fn=collate_fn,
             shuffle=True,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory
         )
 
-    def val_dataloader(self):
+    def val_dataloader(self, collate_fn=_collate_aseatoms):
         return DataLoader(
             self.val,
             batch_size=self.batch_size,
-            collate_fn=_collate_aseatoms,
+            collate_fn=collate_fn,
             shuffle=self.valshuffle,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory
         )
 
-    def test_dataloader(self):
+    def test_dataloader(self, collate_fn=_collate_aseatoms):
         return DataLoader(
             self.test,
             batch_size=self.batch_size,
-            collate_fn=_collate_aseatoms,
+            collate_fn=collate_fn,
             shuffle=False,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory
         )
 
-    def _all_dataloader(self):
+    def _all_dataloader(self, collate_fn=_collate_aseatoms):
         return DataLoader(
             self.dataset,
             batch_size=self.batch_size,
-            collate_fn=_collate_aseatoms,
+            collate_fn=collate_fn,
             shuffle=False,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory
         )
+
+
+refatQM9 = {"H": {"U0": -0.500273},
+            "C": {"U0": -37.846772},
+            "N": {"U0": -54.583861},
+            "O": {"U0": -75.064579},
+            "F": {"U0": -99.718730}
+            }
+
+
+class QM9DataSet(LitDataSet):
+    def __init__(
+            self,
+            dbpath="qm9.db",
+            atomref=None,
+            batch_size=10,
+            num_workers=cpu_count(),
+            pin_memory=False,
+            **kwargs
+    ):
+        if atomref is None:
+            atomref = refatQM9
+        self.batch_size = batch_size
+        self.dbpath = dbpath
+        self.atomref = atomref
+        self.num_workers = num_workers
+        self.pin_memory = pin_memory
+        super().__init__(dbpath=dbpath,
+                         atomref=atomref,
+                         batch_size=batch_size,
+                         num_workers=num_workers,
+                         pin_memory=pin_memory,
+                         **kwargs)
+
+    def prepare_data(self, stage=None):
+        self.dataset = DBData(dbpath=self.dbpath,
+                              refatom=self.atomref
+                              )

@@ -22,7 +22,8 @@ class XtbXyzDataSet(LitDataSet):
             pin_memory=False,
             statistics=True,
             valshuffle=False,
-            proceed=False
+            proceed=False,
+            **kwargs
     ):
         super().__init__(
             dbpath=dbpath,
@@ -32,6 +33,7 @@ class XtbXyzDataSet(LitDataSet):
             pin_memory=pin_memory,
             statistics=statistics,
             valshuffle=valshuffle,
+            **kwargs
         )
         self.xyzfiledir = xyzfiledir
         self.proceed = proceed

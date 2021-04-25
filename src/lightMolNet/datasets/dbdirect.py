@@ -11,6 +11,7 @@ import logging
 import numpy as np
 from ase.data import atomic_numbers
 from ase.units import Hartree
+
 from lightMolNet.datasets import AtomsData
 
 logger = logging.getLogger(__name__)
@@ -101,3 +102,4 @@ class DBData(AtomsData):
             atref[atomic_numbers[z], 0] = float(self.refatom[z]["U0"])  # Only energy
 
         return atref, labels
+

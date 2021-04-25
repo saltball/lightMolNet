@@ -75,14 +75,18 @@ class torchCaculator(Calculator):
         inputs = batch
         inputs[InputPropertiesList.R].requires_grad = True
         self.net.freeze()
+        if self.use_gpu:
+            self.net.cuda()
+        else:
+            pass
         energy = self.net(inputs)
         if isinstance(energy, tuple):
             [item.backward() for item in energy[0]]
         else:
             [item.backward() for item in energy.values()]
         forces = inputs[InputPropertiesList.R].grad
-        if not isinstance(energy[0], dict):
-            self.model["energy"] = energy[0].detach().cpu().numpy()[0]
+        if not isinstance(energy, dict):
+            self.model["energy"] = energy.detach().cpu().numpy()[0]
         else:
             self.model["energy"] = energy["energy_U0"].detach().cpu().numpy()[0]
         self.model["gradient"] = forces.cpu().numpy()[0]

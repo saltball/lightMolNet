@@ -23,7 +23,7 @@ class MyLogging(logging.Logger):
             Name of logger
         level: int
             logging.INFO, logging.DEBUG,...
-        file: str
+        file: str or None
             File name of log.
             If None, log to console.
         """

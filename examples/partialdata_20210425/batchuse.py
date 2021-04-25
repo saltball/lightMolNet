@@ -1,0 +1,117 @@
+# -*- coding: utf-8 -*-
+# ====================================== #
+# @Author  : Yanbo Han
+# @Email   : yanbohan98@gmail.com
+# @File    : batchuse.py
+# ALL RIGHTS ARE RESERVED UNLESS STATED.
+# ====================================== #
+import os
+
+import numpy as np
+import torch
+from tqdm import tqdm
+
+from lightMolNet import Properties
+from lightMolNet.Struct.Atomistic.atomwise import Atomwise
+from lightMolNet.Struct.nn.schnet import SchNet
+from lightMolNet.data.atomsref import get_refatoms, refat_xTB
+from lightMolNet.data.dataloader import _collate_aseatoms_with_cuda
+from lightMolNet.datasets.LitDataSet.xtbxyzdataset import XtbXyzDataSet
+from lightMolNet.net import LitNet
+
+Batch_Size = 128
+USE_GPU = 1
+
+
+def calculate_qm9xtb(state_dict):
+    atomrefs = get_refatoms(refat_xTB, Properties.energy_U0, z_max=18)
+    model = LitNet(learning_rate=1e-4,
+                   # datamodule=dataset,
+                   atomref=atomrefs,
+                   representNet=[SchNet],
+                   outputNet=[Atomwise],
+                   outputPro=[Properties.energy_U0],
+                   batch_size=Batch_Size,
+                   # scheduler=scheduler
+                   )
+
+    model.load_state_dict(state_dict["state_dict"])
+    model.freeze()
+
+    dataset = XtbXyzDataSet(dbpath=r"D:\CODE\#DATASETS\myDataSet\qm9inxtb.db",
+                            xyzfiledir=r"D:\CODE\#DATASETS\FullDB\xTBBack",
+                            # atomref=atomrefs,
+                            # batch_size=Batch_Size,
+                            # pin_memory=True,
+                            # proceed=True,
+                            )
+
+    atomsDataLoader = dataset._all_dataloader()
+    predlist = []
+    refenlist = []
+    for inputss, keys in tqdm(atomsDataLoader, desc="Working on result calculation."):
+        results = model(inputss)["energy_U0"].detach().cpu().numpy()
+        refen = keys[0].detach().cpu().numpy()
+        preden = results
+        predlist.extend(preden.tolist())
+        refenlist.extend(refen.tolist())
+
+    np.save("QM9XTB_pred.npy", predlist)
+    np.save("QM9XTB_ref.npy", refenlist)
+
+
+def calculate_fullerxtb(state_dict):
+    atomrefs = get_refatoms(refat_xTB, Properties.energy_U0, z_max=18)
+    model = LitNet(learning_rate=1e-4,
+                   # datamodule=dataset,
+                   atomref=atomrefs,
+                   representNet=[SchNet],
+                   outputNet=[Atomwise],
+                   outputPro=[Properties.energy_U0],
+                   batch_size=Batch_Size,
+                   # scheduler=scheduler
+                   )
+
+    model.load_state_dict(state_dict["state_dict"])
+    model.freeze()
+    if USE_GPU:
+        model.to(device="cuda")
+
+    dataset = XtbXyzDataSet(dbpath=r"C60xtb.db",
+                            xyzfiledir=r"D:\CODE\#DATASETS\FullDB\xTBcal\C60",
+                            atomref=atomrefs,
+                            statistics=False,
+                            # pin_memory=True,
+                            # proceed=True,
+                            batch_size=Batch_Size,
+                            num_workers=0
+                            )
+    dataset.prepare_data()
+    dataset.setup()
+    atomsDataLoader = dataset._all_dataloader(_collate_aseatoms_with_cuda)
+    predlist = []
+    refenlist = []
+    for inputss, keys in tqdm(atomsDataLoader, desc="Working on result calculation."):
+        results = model(inputss)["energy_U0"].detach().cpu().numpy()
+        refen = keys[0].detach().cpu().numpy()
+        preden = results
+        predlist.extend(preden.tolist())
+        refenlist.extend(refen.tolist())
+
+    np.save("FullXTB_pred.npy", predlist)
+    np.save("FullXTB_ref.npy", refenlist)
+
+
+if __name__ == '__main__':
+    ckpt_path = r"E:\#Projects\#Research\0105-xTBQM9-SchNet-baseline-2\output01051532\checkpoints\FullNet-epoch=1750-val_loss=0.0000.ckpt"
+
+    state_dict = torch.load(ckpt_path)
+    if not os.path.exists(r"QM9XTB_ref.npy"):
+        calculate_qm9xtb(state_dict)
+    # predlist=np.load("QM9XTB_pred.npy")
+    # refenlist=np.load("QM9XTB_ref.npy")
+    if not os.path.exists(r"FullXTB_pred.npy"):
+        calculate_fullerxtb(state_dict)
+    predlist = np.load("FullXTB_pred.npy")
+    refenlist = np.load("FullXTB_ref.npy")
+    difflist = np.save("FullXTB_dif.npy", predlist - refenlist)

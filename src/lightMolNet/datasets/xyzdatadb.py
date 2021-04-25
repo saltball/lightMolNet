@@ -10,7 +10,6 @@ import os
 
 import numpy as np
 from ase.atoms import Atoms
-from ase.data import atomic_numbers
 from ase.units import Hartree
 from tqdm import tqdm
 
@@ -33,6 +32,7 @@ def simple_read_xyz_xtb(fileobj, index=None, read_comment=True):
         symbols = []
         positions = []
         n = i * (natoms + 2) + 2
+        comments = {}
         if read_comment:
             try:
                 comments = dict(energy=float(lines[n - 1].split()[1]))
@@ -40,7 +40,7 @@ def simple_read_xyz_xtb(fileobj, index=None, read_comment=True):
                 if not len(lines[n - 1].split()):
                     raise Exception(f"Comments not recognizable: {lines[n - 1]}.\n Try to set `read_comment=False`.")
         else:
-            comments = {}
+            pass
         for line in lines[n:n + natoms]:
             symbol, x, y, z = line.split()[:4]
             symbol = symbol.lower().capitalize()
@@ -131,11 +131,11 @@ class XYZDataDB(FileSystemAtomsData):
 
     def _load_atomrefs(self):
         labels = [
-            XYZDataDB.U0
+            XYZDataDB.U0  # Todo: Not only energy
         ]
         atref = np.zeros((self.zmax, len(labels)))
-        for z in self.refatom.keys():
-            atref[atomic_numbers[z], 0] = float(self.refatom[z]["U0"])  # Only energy
+        for idx, z in enumerate(self.refatom.keys()):
+            atref[:, idx] = self.refatom[z].reshape(-1, )  # Todo: Not only energy
 
         return atref, labels
 

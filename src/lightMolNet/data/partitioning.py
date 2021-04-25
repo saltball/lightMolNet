@@ -21,6 +21,18 @@ def random_split_partial(
         partial=None,
         split_file="split"
 ):
+    r"""
+
+    Parameters
+    ----------
+    data
+    partial
+    split_file: no extension name
+
+    Returns
+    -------
+
+    """
     if partial is None:
         partial = [60, 20, 20]
     num_train = partial[0]
