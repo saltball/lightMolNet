@@ -47,53 +47,27 @@ class represent2out(torch.nn.Module):
         return atomwiseinput
 
 
-class LitNet(pl.LightningModule):
-    def __init__(
-            self,
-            learning_rate=1e-4,
-            datamodule=None,
-            representNet=None,
-            n_atom_embeddings=128,
-            n_filters=128,
-            n_interactions=6,
-            cutoff=10,
-            n_gaussians=50,
-            max_Z=18,
-            outputNet=None,
-            outputPro=None,
-            batch_size=None,
-            atomref=None,
-            means=None,
-            stddevs=None,
-            scheduler=None
-    ):
-        """
-
-        Parameters
-        ----------
-        learning_rate
-        datamodule
-        representNet
-        n_atom_embeddings
-        n_filters
-        n_interactions
-        cutoff
-        n_gaussians
-        max_Z
-        outputNet
-        outputPro
-        batch_size
-        atomref
-        means
-        stddevs
-        scheduler
-
-        """
+class LitNetParent(pl.LightningModule):
+    def __init__(self, batch_size, learning_rate, datamodule, scheduler, optimizer_kwargs={}, optimizer=torch.optim.Adam,
+                 stddevs=None, means=None, atomref=None, *args, **kwargs):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
-        super().__init__()
-        self.save_hyperparameters("batch_size", "learning_rate", "means", "stddevs")
+        super().__init__(*args, **kwargs)
+        self.save_hyperparameters("batch_size", "learning_rate")
         self.datamodule = datamodule
+        self.optimizer = optimizer
+        self.optimizer_kwargs = optimizer_kwargs
+        self.scheduler = scheduler
+
+        self.init(*args, **kwargs)
+
+        self.optimizer = self.optimizer(self.parameters(), lr=self.hparams.learning_rate, **self.optimizer_kwargs)
+        if self.scheduler is not None:
+            schedulerpara = {k: v for k, v in self.scheduler.items() if k != "_scheduler"}
+            self.scheduler = self.scheduler["_scheduler"](
+                self.optimizer,
+                **schedulerpara
+            )
 
         if stddevs is None:
             if self.datamodule is not None:
@@ -130,13 +104,6 @@ class LitNet(pl.LightningModule):
         self.output = [
 
         ]
-        self.outputNet = outputNet
-        if self.outputNet is None:
-            self.outputNet = [Atomwise]
-            self.outputPro = [Properties.energy_U0]
-        else:
-            self.outputNet = outputNet
-            self.outputPro = outputPro
         if self.atomref is None:
             self.atomref = {i: None for i in self.outputPro}
         if self.stddevs is None:
@@ -144,86 +111,8 @@ class LitNet(pl.LightningModule):
         if self.means is None:
             self.means = {i: None for i in self.outputPro}
 
-        self.representNet = representNet
-        if representNet is None:
-            self.representNet = [SchNet]
-        else:
-            self.representNet = representNet
-
-        self.represent2out = represent2out(len(self.representNet), len(self.outputNet))
-
-        self.n_atom_embeddings = n_atom_embeddings
-        self.n_filters = n_filters
-        self.n_interactions = n_interactions
-        self.cutoff = cutoff
-        self.n_gaussians = n_gaussians
-        self.max_Z = max_Z
-
-        for net in self.representNet:
-            self.represent.append(
-                net(
-                    n_atom_embeddings=self.n_atom_embeddings,
-                    n_filters=self.n_filters,
-                    n_interactions=self.n_interactions,
-                    cutoff=self.cutoff,
-                    n_gaussians=self.n_gaussians,
-                    max_Z=self.max_Z
-                )
-            )
-
-        self.represent = ModuleList(self.represent)
-        for index, net in enumerate(self.outputNet):
-            self.output.append(
-                net(
-                    n_in=self.n_atom_embeddings,
-                    n_out=1,
-                    atomref=self.atomref[self.outputPro[index]],
-                    property=self.outputPro[index],
-                    mean=self.means[self.outputPro[index]],
-                    stddev=self.stddevs[self.outputPro[index]]
-                )
-            )
-        self.output = ModuleList(self.output)
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.learning_rate)
-        if scheduler is not None:
-            schedulerpara = {k: v for k, v in scheduler.items() if k != "_scheduler"}
-            self.scheduler = scheduler["_scheduler"](
-                self.optimizer,
-                **schedulerpara
-            )
-
-    def forward(
-            self,
-            inputs
-    ):
-        """
-
-        Parameters
-        ----------
-        inputs:list
-            check order of `lightMolNet.InputPropertiesList`
-
-        Returns
-        -------
-
-        """
-        # representation parts
-        representation = []
-        for net in self.represent:
-            representation.append(net(inputs))
-
-        # representation2out parts
-        represent2out = self.represent2out(representation)
-        for index, item in enumerate(AtomWiseInputPropertiesList.input_list):
-            if item != AtomWiseInputPropertiesList.input_list[AtomWiseInputPropertiesList.representation_value]:
-                represent2out[index] = inputs[InputPropertiesList.input_list.index(item)]
-
-        # output parts
-        outs = {}
-
-        for net in self.output:
-            outs.update(net(represent2out))
-        return outs
+    def init(self, *args, **kwargs):
+        raise NotImplementedError("Don't override `__init__()` method.")
 
     def training_step(self, batch, batch_idx):
         batch, y = batch
@@ -308,3 +197,128 @@ class LitNet(pl.LightningModule):
         for k, v in state_dict.items():
             state_dict[k] = v.detach().cpu().numpy()
         return state_dict
+
+
+class LitNet(LitNetParent):
+    def init(
+            self,
+            learning_rate=1e-4,
+            datamodule=None,
+            representNet=None,
+            n_atom_embeddings=128,
+            n_filters=128,
+            n_interactions=6,
+            cutoff=10,
+            n_gaussians=50,
+            max_Z=18,
+            outputNet=None,
+            outputPro=None,
+            batch_size=None,
+            atomref=None,
+            means=None,
+            stddevs=None,
+            scheduler=None
+    ):
+        """
+
+        Parameters
+        ----------
+        learning_rate
+        datamodule
+        representNet
+        n_atom_embeddings
+        n_filters
+        n_interactions
+        cutoff
+        n_gaussians
+        max_Z
+        outputNet
+        outputPro
+        batch_size
+        atomref
+        means
+        stddevs
+        scheduler
+
+        """
+
+        self.representNet = representNet
+        if representNet is None:
+            self.representNet = [SchNet]
+        else:
+            self.representNet = representNet
+
+        self.represent2out = represent2out(len(self.representNet), len(self.outputNet))
+
+        self.n_atom_embeddings = n_atom_embeddings
+        self.n_filters = n_filters
+        self.n_interactions = n_interactions
+        self.cutoff = cutoff
+        self.n_gaussians = n_gaussians
+        self.max_Z = max_Z
+
+        for net in self.representNet:
+            self.represent.append(
+                net(
+                    n_atom_embeddings=self.n_atom_embeddings,
+                    n_filters=self.n_filters,
+                    n_interactions=self.n_interactions,
+                    cutoff=self.cutoff,
+                    n_gaussians=self.n_gaussians,
+                    max_Z=self.max_Z
+                )
+            )
+
+        self.represent = ModuleList(self.represent)
+        for index, net in enumerate(self.outputNet):
+            self.output.append(
+                net(
+                    n_in=self.n_atom_embeddings,
+                    n_out=1,
+                    atomref=self.atomref[self.outputPro[index]],
+                    property=self.outputPro[index],
+                    mean=self.means[self.outputPro[index]],
+                    stddev=self.stddevs[self.outputPro[index]]
+                )
+            )
+        self.output = ModuleList(self.output)
+        self.outputNet = outputNet
+        if self.outputNet is None:
+            self.outputNet = [Atomwise]
+            self.outputPro = [Properties.energy_U0]
+        else:
+            self.outputNet = outputNet
+            self.outputPro = outputPro
+
+    def forward(
+            self,
+            inputs
+    ):
+        """
+
+        Parameters
+        ----------
+        inputs:list
+            check order of `lightMolNet.InputPropertiesList`
+
+        Returns
+        -------
+
+        """
+        # representation parts
+        representation = []
+        for net in self.represent:
+            representation.append(net(inputs))
+
+        # representation2out parts
+        represent2out = self.represent2out(representation)
+        for index, item in enumerate(AtomWiseInputPropertiesList.input_list):
+            if item != AtomWiseInputPropertiesList.input_list[AtomWiseInputPropertiesList.representation_value]:
+                represent2out[index] = inputs[InputPropertiesList.input_list.index(item)]
+
+        # output parts
+        outs = {}
+
+        for net in self.output:
+            outs.update(net(represent2out))
+        return outs

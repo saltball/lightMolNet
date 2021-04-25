@@ -104,7 +104,7 @@ def cli_main(ckpt_path, schnetold=False):
     )
 
     ### train
-    # trainer.fit(model)
+    trainer.fit(model)
 
     ### scale_batch
     # trainer.tune(model)
@@ -114,8 +114,8 @@ def cli_main(ckpt_path, schnetold=False):
     # fig = lr_finder.plot(suggest=True, show=True)
     # print(lr_finder.suggestion())
 
-    result = trainer.test(model, verbose=True)
-    print(result)
+    # result = trainer.test(model, verbose=True)
+    # print(result)
 
 
 if __name__ == '__main__':

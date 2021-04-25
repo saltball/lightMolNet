@@ -10,17 +10,16 @@ import pytorch_lightning as pl
 import torch
 from torch import nn
 
-from lightMolNet import Properties, InputPropertiesList
+from lightMolNet import Properties, InputPropertiesList, InputPropertiesList_y
 from lightMolNet.Module.GatherNet import MLP
 from lightMolNet.Module.atomcentersymfunc import GaussianSmearing
 from lightMolNet.Module.cutoff import CosineCutoff
 from lightMolNet.Module.interaction import SimpleAtomInteraction
 from lightMolNet.Module.neighbors import distance_matrix, AtomDistances
-from lightMolNet.Struct.Atomistic.atomwise import Atomwise
-from lightMolNet.Struct.nn.schnet import SchNet
 from lightMolNet.data.atomsref import get_refatoms, refat_xTB
+from lightMolNet.data.dataloader import _collate_aseatoms
 from lightMolNet.datasets.LitDataSet.xtbxyzdataset import XtbXyzDataSet
-from lightMolNet.net import LitNet
+from lightMolNet.net import LitNetParent
 
 
 class FullerNet(nn.Module):
@@ -115,11 +114,12 @@ class FullerNet(nn.Module):
         a_pp = (a_p[:, :, None] * a_p[:, None, :]).squeeze(-1)
         a_sp = (a_s[:, :, None] * a_p[:, None, :]).squeeze(-1)
         spintor = -2 * a_sp ** 2 * Dij + 3 * a_sp
-        ppintor = -2 * a_pp ** 2 * Dij + 7 * a_pp + 1 / (Dij ** 2 - 1 / (2 * a_pp))
-        orbital_p_cos = (orbital_p_vec[:, None, :] * orbital_p_vec[:, :, None]).sum(-1)
-        orbital_p_sin = 1 - orbital_p_cos ** 2
+        pxpyintor = spintor + 4 * a_pp
+        pzpzintor = pxpyintor + 1 / (Dij ** 2 - 1 / (2 * a_pp))
+        orbital_p_cos = (orbital_p_vec[:, None, :] * orbital_p_vec[:, :, None]).sum(-1) / 2 + 0.5
+        orbital_p_sin = 1 - orbital_p_cos
 
-        beta = spintor * orbital_p_sin / 1.73205 + ppintor * orbital_p_sin / 0.81649 + orbital_p_sin * orbital_p_cos * ppintor
+        beta = spintor * orbital_p_sin + 3 * orbital_p_cos * pzpzintor + 2 * orbital_p_sin * pxpyintor
         nelec = (atomic_numbers > 0).sum(-1, keepdim=True) // 2
         elecinx = torch.ones([n_batch, length], device=positions.device, dtype=int) * torch.arange(length,
                                                                                                    device=positions.device,
@@ -131,23 +131,29 @@ class FullerNet(nn.Module):
         return self.W(E_pi)
 
 
-class LitFullerNet(LitNet):
-    def __init__(self, max_Z=18, **kwargs):
-        # super().__init__(max_Z=max_Z, **kwargs)
-        # self.freeze()
-        self.fullernet = FullerNet(dis_cut=5,
-                                   max_Z=18,
-                                   n_atom_embeddings=128,
-                                   n_gaussians=6,
-                                   n_filters=128,
-                                   n_interactions=3,
-                                   cutoff=5.0)
+class LitFullerNet(LitNetParent):
+    def init(self, dis_cut=5,
+             max_Z=18,
+             n_atom_embeddings=128,
+             n_gaussians=16,
+             n_filters=6,
+             n_interactions=5,
+             cutoff=5, **kwargs):
+        self.fullernet = FullerNet(dis_cut=dis_cut,
+                                   max_Z=max_Z,
+                                   n_atom_embeddings=n_atom_embeddings,
+                                   n_gaussians=n_gaussians,
+                                   n_filters=n_filters,
+                                   n_interactions=n_interactions,
+                                   cutoff=cutoff)
+        self.outputPro = [Properties.energy_U0]
 
     def forward(self, inputs):
-        # result = super(LitFullerNet, self).forward(inputs)
-        # result[Properties.energy_U0] += self.fullernet(inputs)
-        # return result
-        return self.fullernet(inputs)
+        outs = {}
+        outs.update({Properties.energy_U0: self.fullernet(inputs)})
+        return outs
+
+        # return self.fullernet(inputs)
 
 
 Batch_Size = 64
@@ -155,9 +161,25 @@ USE_GPU = 1
 
 atomrefs = get_refatoms(refat_xTB, Properties.energy_U0, z_max=18)
 
+import numpy as np
+from functools import partial
+
+
+def collate_fn_using_dif_with_file(examples, diff_file):
+    difflist = np.load(diff_file)
+    batch_list, properties_list = _collate_aseatoms(examples)
+    properties_list[InputPropertiesList_y.energy_U0] = torch.Tensor(difflist[batch_list[InputPropertiesList.idx]]).reshape(properties_list[InputPropertiesList_y.energy_U0].size())
+    return batch_list, properties_list
+
+
+def collate_fn_using_dif(diff_file):
+    func = partial(collate_fn_using_dif_with_file, diff_file=diff_file)
+    return func
+
 
 def cli_main(ckpt_path=None, schnetold=False):
     from pytorch_lightning.callbacks import ModelCheckpoint
+    diff_file = r"D:\CODE\PycharmProjects\lightMolNet\examples\partialdata_20210425\FullXTB_dif.npy"
     checkpoint_callback = ModelCheckpoint(
         monitor='val_0_loss_MAE',
         filename='FullNet-{epoch:02d}-{val_loss:.4f}',
@@ -172,21 +194,19 @@ def cli_main(ckpt_path=None, schnetold=False):
                             pin_memory=True,
                             proceed=True,
                             statistics=statistics,
+                            collate_fn=collate_fn_using_dif(diff_file)
                             )
     dataset.prepare_data()
     dataset.setup(data_partial=None)
     scheduler = {"_scheduler": torch.optim.lr_scheduler.CyclicLR,
-                 "base_lr": 1e-8,
-                 "max_lr": 1e-2,
+                 "base_lr": 1e-7,
+                 "max_lr": 1e-4,
                  "step_size_up": 10,
-                 "step_size_down": 200,
+                 "step_size_down": 100,
                  "cycle_momentum": False
                  }
     model = LitFullerNet(learning_rate=1e-2,
                          datamodule=dataset,
-                         representNet=[SchNet],
-                         outputNet=[Atomwise],
-                         outputPro=[Properties.energy_U0],
                          batch_size=Batch_Size,
                          scheduler=scheduler,
                          # means=0,
@@ -236,6 +256,7 @@ def cli_main(ckpt_path=None, schnetold=False):
 
     ### train
     trainer.fit(model)
+    # torch.save(model.fullernet, 'save.pt')
 
     ### scale_batch
     # trainer.tune(model)
@@ -250,8 +271,8 @@ def cli_main(ckpt_path=None, schnetold=False):
 
 
 if __name__ == '__main__':
-    ckpt_path = r"E:\#Projects\#Research\0105-xTBQM9-SchNet-baseline-2\output01051532\checkpoints\FullNet-epoch=1750-val_loss=0.0000.ckpt"
-    cli_main(ckpt_path=ckpt_path, schnetold=False)
+    # ckpt_path = r"E:\#Projects\#Research\0105-xTBQM9-SchNet-baseline-2\output01051532\checkpoints\FullNet-epoch=1750-val_loss=0.0000.ckpt"
+    cli_main(ckpt_path=None, schnetold=False)
     # from ase.atoms import Atoms
     # from ase.build import molecule
     # from ase.visualize import view

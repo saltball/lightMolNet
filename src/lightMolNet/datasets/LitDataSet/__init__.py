@@ -28,6 +28,7 @@ class LitDataSet(pl.LightningDataModule):
             statistics=True,
             valshuffle=False,
             use_gpu="cuda",
+            collate_fn=_collate_aseatoms,
             **kwargs
     ):
         # if atomref is None:
@@ -44,6 +45,7 @@ class LitDataSet(pl.LightningDataModule):
         self.dataset = None
         self.valshuffle = valshuffle
         self.use_gpu = use_gpu
+        self.collate_fn = collate_fn
         super().__init__()
 
     def setup(self, stage=None, data_partial=None, split_file_name="split"):
@@ -54,7 +56,7 @@ class LitDataSet(pl.LightningDataModule):
                                  partial=data_partial,
                                  split_file=split_file_name)
         if self.statistics:
-            tmp_dataloader = DataLoader(self.train, batch_size=self.batch_size, collate_fn=_collate_aseatoms, shuffle=True, num_workers=self.num_workers, pin_memory=self.pin_memory)
+            tmp_dataloader = DataLoader(self.train, batch_size=self.batch_size, collate_fn=self.collate_fn, shuffle=True, num_workers=self.num_workers, pin_memory=self.pin_memory)
             means, stddevs = get_statistics(tmp_dataloader,
                                             "energy_U0", single_atom_ref=self.atomref
                                             )
@@ -66,41 +68,41 @@ class LitDataSet(pl.LightningDataModule):
     def prepare_data(self):
         raise NotImplementedError(f"Method `prepare_data()` must be implemented for instance of class `{self.__class__}`")
 
-    def train_dataloader(self, collate_fn=_collate_aseatoms):
+    def train_dataloader(self):
         return DataLoader(
             self.train,
             batch_size=self.batch_size,
-            collate_fn=collate_fn,
+            collate_fn=self.collate_fn,
             shuffle=True,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory
         )
 
-    def val_dataloader(self, collate_fn=_collate_aseatoms):
+    def val_dataloader(self):
         return DataLoader(
             self.val,
             batch_size=self.batch_size,
-            collate_fn=collate_fn,
+            collate_fn=self.collate_fn,
             shuffle=self.valshuffle,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory
         )
 
-    def test_dataloader(self, collate_fn=_collate_aseatoms):
+    def test_dataloader(self):
         return DataLoader(
             self.test,
             batch_size=self.batch_size,
-            collate_fn=collate_fn,
+            collate_fn=self.collate_fn,
             shuffle=False,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory
         )
 
-    def _all_dataloader(self, collate_fn=_collate_aseatoms):
+    def _all_dataloader(self):
         return DataLoader(
             self.dataset,
             batch_size=self.batch_size,
-            collate_fn=collate_fn,
+            collate_fn=self.collate_fn,
             shuffle=False,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory

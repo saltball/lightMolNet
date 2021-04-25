@@ -21,11 +21,12 @@ import warnings
 import numpy as np
 import torch
 from ase.db import connect
+from tqdm import tqdm
+
 from lightMolNet import Properties
 from lightMolNet.Module.neighbors import atom_distances
 from lightMolNet.environment import collect_atom_triples, SimpleEnvironmentProvider
 from lightMolNet.module_utils import read_deprecated_database
-from tqdm import tqdm
 
 
 def get_center_of_mass(atoms):
@@ -195,7 +196,7 @@ class AtomsData(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         at, properties = self.get_properties(idx)
-        properties["_idx"] = torch.LongTensor(np.array([idx], dtype=np.int))
+        properties["_idx"] = torch.LongTensor(np.array([self._subset_index(idx)], dtype=np.int))
 
         return properties
 
