@@ -48,8 +48,18 @@ class represent2out(torch.nn.Module):
 
 
 class LitNetParent(pl.LightningModule):
-    def __init__(self, batch_size, learning_rate, datamodule, scheduler, optimizer_kwargs={}, optimizer=torch.optim.Adam,
-                 stddevs=None, means=None, atomref=None, *args, **kwargs):
+    def __init__(self,
+                 batch_size,
+                 learning_rate,
+                 datamodule,
+                 scheduler,
+                 optimizer_kwargs={},
+                 optimizer=torch.optim.Adam,
+                 representNet=None,
+                 stddevs=None,
+                 means=None,
+                 atomref=None,
+                 *args, **kwargs):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         super().__init__(*args, **kwargs)
@@ -59,15 +69,17 @@ class LitNetParent(pl.LightningModule):
         self.optimizer_kwargs = optimizer_kwargs
         self.scheduler = scheduler
 
-        self.init(*args, **kwargs)
+        self.represent = [
 
-        self.optimizer = self.optimizer(self.parameters(), lr=self.hparams.learning_rate, **self.optimizer_kwargs)
-        if self.scheduler is not None:
-            schedulerpara = {k: v for k, v in self.scheduler.items() if k != "_scheduler"}
-            self.scheduler = self.scheduler["_scheduler"](
-                self.optimizer,
-                **schedulerpara
-            )
+        ]
+
+        self.output = [
+
+        ]
+        if self.datamodule is not None and atomref is None:
+            self.atomref = self.datamodule.atomref
+        else:
+            self.atomref = atomref
 
         if stddevs is None:
             if self.datamodule is not None:
@@ -89,27 +101,18 @@ class LitNetParent(pl.LightningModule):
             self.means = {Properties.energy_U0: 0}
             # raise ValueError("Please specify `mean`.")
 
-        if self.datamodule is not None and atomref is None:
-            self.atomref = self.datamodule.atomref
-        else:
-            self.atomref = atomref
-
         if self.datamodule is not None and self.atomref is None:
             raise ValueError("Please specify or check your `atomref` input.")
 
-        self.represent = [
+        self.init(representNet=representNet, *args, **kwargs)
 
-        ]
-
-        self.output = [
-
-        ]
-        if self.atomref is None:
-            self.atomref = {i: None for i in self.outputPro}
-        if self.stddevs is None:
-            self.stddevs = {i: None for i in self.outputPro}
-        if self.means is None:
-            self.means = {i: None for i in self.outputPro}
+        self.optimizer = self.optimizer(self.parameters(), lr=self.hparams.learning_rate, **self.optimizer_kwargs)
+        if self.scheduler is not None:
+            schedulerpara = {k: v for k, v in self.scheduler.items() if k != "_scheduler"}
+            self.scheduler = self.scheduler["_scheduler"](
+                self.optimizer,
+                **schedulerpara
+            )
 
     def init(self, *args, **kwargs):
         raise NotImplementedError("Don't override `__init__()` method.")
@@ -217,9 +220,11 @@ class LitNet(LitNetParent):
             atomref=None,
             means=None,
             stddevs=None,
-            scheduler=None
+            scheduler=None,
+            **kwargs
     ):
         """
+
 
         Parameters
         ----------
@@ -248,6 +253,24 @@ class LitNet(LitNetParent):
         else:
             self.representNet = representNet
 
+        self.outputNet = outputNet
+        if self.outputNet is None:
+            self.outputNet = [Atomwise]
+            self.outputPro = [Properties.energy_U0]
+        else:
+            self.outputNet = outputNet
+            self.outputPro = outputPro
+
+        if self.atomref is None:
+            logger.warning("`atomref1 is initial as 0.")
+            self.atomref = {i: 0 for i in self.outputPro}
+        if self.stddevs is None:
+            logger.warning("`stddevs` is initial as 1.")
+            self.stddevs = {i: 1 for i in self.outputPro}
+        if self.means is None:
+            logger.warning("`means` is initial as 0.")
+            self.means = {i: 0 for i in self.outputPro}
+
         self.represent2out = represent2out(len(self.representNet), len(self.outputNet))
 
         self.n_atom_embeddings = n_atom_embeddings
@@ -265,11 +288,13 @@ class LitNet(LitNetParent):
                     n_interactions=self.n_interactions,
                     cutoff=self.cutoff,
                     n_gaussians=self.n_gaussians,
-                    max_Z=self.max_Z
+                    max_Z=self.max_Z,
+                    **kwargs
                 )
             )
 
         self.represent = ModuleList(self.represent)
+
         for index, net in enumerate(self.outputNet):
             self.output.append(
                 net(
@@ -278,17 +303,11 @@ class LitNet(LitNetParent):
                     atomref=self.atomref[self.outputPro[index]],
                     property=self.outputPro[index],
                     mean=self.means[self.outputPro[index]],
-                    stddev=self.stddevs[self.outputPro[index]]
+                    stddev=self.stddevs[self.outputPro[index]],
+                    **kwargs
                 )
             )
         self.output = ModuleList(self.output)
-        self.outputNet = outputNet
-        if self.outputNet is None:
-            self.outputNet = [Atomwise]
-            self.outputPro = [Properties.energy_U0]
-        else:
-            self.outputNet = outputNet
-            self.outputPro = outputPro
 
     def forward(
             self,
@@ -322,3 +341,22 @@ class LitNet(LitNetParent):
         for net in self.output:
             outs.update(net(represent2out))
         return outs
+
+    def _freeze_represent(self,rep_idx=None):
+        if rep_idx:
+            net = self.represent[rep_idx]
+            for param in net.parameters():
+                param.requires_grad = False
+        else:
+            for net in self.represent:
+                for param in net.parameters():
+                    param.requires_grad = False
+
+    def _freeze_output(self,out_idx=None):
+        if out_idx:
+            for param in net.parameters():
+                param.requires_grad = False
+        else:
+            for net in self.output:
+                for param in net.parameters():
+                    param.requires_grad = False

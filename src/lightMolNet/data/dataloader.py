@@ -108,3 +108,20 @@ def _collate_aseatoms_with_cuda(examples):
         if k is not None:
             batch_list[idx] = k[:].to(device="cuda")
     return batch_list, properties_list
+
+def _collate_fn_using_dif_with_file(examples, diff_file):
+    """
+    return input dict with modified by `diff_file`(in database order)
+    """
+    difflist = np.load(diff_file)
+    batch_list, properties_list = _collate_aseatoms(examples)
+    properties_list[InputPropertiesList_y.energy_U0] = torch.Tensor(difflist[batch_list[InputPropertiesList.idx]]).reshape(properties_list[InputPropertiesList_y.energy_U0].size())
+    return batch_list, properties_list
+
+
+def _collate_fn_using_dif(diff_file):
+    """
+    wrapper of `_collate_fn_using_dif_with_file` for torch dataset moudle.
+    """
+    func = partial(_collate_fn_using_dif_with_file, diff_file=diff_file)
+    return func

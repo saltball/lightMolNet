@@ -29,13 +29,13 @@ class SchNet(nn.Module):
     def __init__(self,
                  n_atom_embeddings: int = 128,
                  n_filters: int = 128,
-                 n_interactions: int = 3,
-                 cutoff: float = 5.0,
-                 n_gaussians: int = 25,
+                 n_interactions: int = 6,
+                 cutoff: float = 10.0,
+                 n_gaussians: int = 50,
                  normalize_filter: bool = False,
                  coupled_interactions: bool = False,
                  return_intermediate: bool = False,
-                 max_Z: int = 100,
+                 max_Z: int = 18,
                  cutoff_network: torch.nn.Module = CosineCutoff,
                  trainable_gaussians: bool = False,
                  distance_expansion: torch.nn.Module = None,
@@ -161,3 +161,81 @@ class SchNet(nn.Module):
         if self.return_intermediate:
             return x, xs
         return x
+
+
+class SchNetLong(SchNet):
+
+    def __init__(self,
+                 max_Z=18,
+                 n_atom_embeddings=128,
+                 n_gaussians=12,
+                 n_filters=5,
+                 n_interactions=5,
+                 cutoff=10,
+                 n_long_interactions=5,
+                 **kwargs):
+        self.outputPro = [Properties.energy_U0]
+        super(SchNetLong, self).__init__(n_atom_embeddings=n_atom_embeddings,
+                                         n_filters=n_filters,
+                                         n_interactions=n_interactions,
+                                         cutoff=cutoff,
+                                         n_gaussians=n_gaussians,
+                                         max_Z=max_Z,
+                                         **kwargs)
+        self._freeze_schnet()
+        LongAtomInteraction = nn.ModuleList(
+            [
+                SimpleAtomInteraction(
+                    n_atom_embeddings=n_atom_embeddings,
+                    n_spatial_basis=n_gaussians,
+                    n_filters=n_filters,
+                    cutoff_network=CosineCutoff,
+                    cutoff=cutoff,
+                )
+                for _ in range(n_long_interactions)
+            ]
+        )
+        self.interactions_long = LongAtomInteraction
+
+    def forward(self, inputs):
+        atomic_numbers = inputs[InputPropertiesList.Z]
+        positions = inputs[InputPropertiesList.R]
+        cell = inputs[InputPropertiesList.cell]
+        cell_offset = inputs[InputPropertiesList.cell_offset]
+        neighbors = inputs[InputPropertiesList.neighbors]
+        neighbor_mask = inputs[InputPropertiesList.neighbor_mask]
+
+        # get atom embeddings for the input atomic numbers
+        x = self.embeddings(atomic_numbers)
+
+        # charged system is not supported.
+
+        # compute interatomic distance of every atom to its neighbors
+        if self.cal_distance:
+            r_ij = self.distances(
+                positions, neighbors, cell, cell_offset, neighbor_mask=neighbor_mask
+            )
+        else:
+            r_ij = inputs[InputPropertiesList.distance]
+        # expand interatomic distances (for example, Gaussian smearing)
+        f_ij = self.distance_expansion(r_ij)
+        # store intermediate representations
+        if self.return_intermediate:
+            xs = [x]
+        # compute interaction block to update atomic embeddings
+        for interaction in self.interactions_long:
+            v = interaction(x, r_ij, neighbors, neighbor_mask, f_ij=f_ij)
+            x = x + v
+            if self.return_intermediate:
+                xs.append(x)
+
+        if self.return_intermediate:
+            return x, xs
+        return x
+
+        # return self.fullernet(inputs)
+
+    def _freeze_schnet(self):
+        self.freeze()
+        # for name, param in self.named_parameters():
+        #     print(name, param)
