@@ -9,7 +9,7 @@
 import torch
 from torch import nn
 
-from lightMolNet import InputPropertiesList
+from lightMolNet import InputPropertiesList, InputPropertiesList_y
 from lightMolNet.Module.atomcentersymfunc import GaussianSmearing
 from lightMolNet.Module.cutoff import CosineCutoff
 from lightMolNet.Module.interaction import SimpleAtomInteraction
@@ -174,7 +174,7 @@ class SchNetLong(SchNet):
                  cutoff=10,
                  n_long_interactions=5,
                  **kwargs):
-        self.outputPro = [Properties.energy_U0]
+        self.outputPro = [InputPropertiesList_y.energy_U0]
         super(SchNetLong, self).__init__(n_atom_embeddings=n_atom_embeddings,
                                          n_filters=n_filters,
                                          n_interactions=n_interactions,
@@ -236,6 +236,5 @@ class SchNetLong(SchNet):
         # return self.fullernet(inputs)
 
     def _freeze_schnet(self):
-        self.freeze()
-        # for name, param in self.named_parameters():
-        #     print(name, param)
+        for param in self.parameters():
+            param.requires_grad = False
