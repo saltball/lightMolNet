@@ -223,6 +223,12 @@ class SchNetLong(SchNet):
         if self.return_intermediate:
             xs = [x]
         # compute interaction block to update atomic embeddings
+        for interaction in self.interactions:
+            v = interaction(x, r_ij, neighbors, neighbor_mask, f_ij=f_ij)
+            x = x + v
+            if self.return_intermediate:
+                xs.append(x)
+
         for interaction in self.interactions_long:
             v = interaction(x, r_ij, neighbors, neighbor_mask, f_ij=f_ij)
             x = x + v
