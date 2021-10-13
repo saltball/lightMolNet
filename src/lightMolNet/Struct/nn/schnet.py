@@ -140,7 +140,7 @@ class SchNet(nn.Module):
         # charged system is not supported.
 
         # compute interatomic distance of every atom to its neighbors
-        if self.cal_distance:
+        if getattr(self,"cal_distance",None):
             r_ij = self.distances(
                 positions, neighbors, cell, cell_offset, neighbor_mask=neighbor_mask
             )
@@ -211,7 +211,7 @@ class SchNetLong(SchNet):
         # charged system is not supported.
 
         # compute interatomic distance of every atom to its neighbors
-        if self.cal_distance:
+        if getattr(self,"cal_distance",None):
             r_ij = self.distances(
                 positions, neighbors, cell, cell_offset, neighbor_mask=neighbor_mask
             )
@@ -223,11 +223,11 @@ class SchNetLong(SchNet):
         if self.return_intermediate:
             xs = [x]
         # compute interaction block to update atomic embeddings
-        for interaction in self.interactions:
-            v = interaction(x, r_ij, neighbors, neighbor_mask, f_ij=f_ij)
-            x = x + v
-            if self.return_intermediate:
-                xs.append(x)
+        # for interaction in self.interactions:
+        #     v = interaction(x, r_ij, neighbors, neighbor_mask, f_ij=f_ij)
+        #     x = x + v
+        #     if self.return_intermediate:
+        #         xs.append(x)
 
         for interaction in self.interactions_long:
             v = interaction(x, r_ij, neighbors, neighbor_mask, f_ij=f_ij)
