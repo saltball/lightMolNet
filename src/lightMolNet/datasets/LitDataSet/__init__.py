@@ -55,6 +55,9 @@ class LitDataSet(pl.LightningDataModule):
             random_split_partial(data=self.dataset,
                                  partial=data_partial,
                                  split_file=split_file_name)
+        self._statistic()
+
+    def _statistic(self):
         if self.statistics:
             tmp_dataloader = DataLoader(self.train, batch_size=self.batch_size, collate_fn=self.collate_fn, shuffle=True, num_workers=self.num_workers, pin_memory=self.pin_memory)
             means, stddevs = get_statistics(tmp_dataloader,

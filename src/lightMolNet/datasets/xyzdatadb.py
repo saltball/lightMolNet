@@ -18,6 +18,8 @@ from lightMolNet.datasets import FileSystemAtomsData
 from lightMolNet.logger import DebugLogger
 
 logger = DebugLogger(__name__)
+INGORED = False
+# INGORED for flag not to log multiple times.
 
 Add_Batch = 10000
 
@@ -179,5 +181,7 @@ def recursion_xyz_file(rootpath):
             if os.path.splitext(item)[-1].endswith(".xyz"):
                 yield os.path.join(rootpath, item)
             else:
-                logger.debug("File [{}] is not one '.xyz' file,"
+                if not INGORED:
+                    logger.debug("File [{}] is not one '.xyz' file,"
                              "it has been ignored.".format(os.path.join(rootpath, item)))
+                    INGORED = True
