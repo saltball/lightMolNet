@@ -59,9 +59,11 @@ class LitNetParent(pl.LightningModule):
                  stddevs=None,
                  means=None,
                  atomref=None,
+                 cal_distance=True,
                  *args, **kwargs):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
+        self.cal_distance=cal_distance
         super().__init__(*args, **kwargs)
         self.save_hyperparameters("batch_size", "learning_rate")
         self.datamodule = datamodule
@@ -289,6 +291,7 @@ class LitNet(LitNetParent):
                     cutoff=self.cutoff,
                     n_gaussians=self.n_gaussians,
                     max_Z=self.max_Z,
+                    cal_distance=self.cal_distance,
                     **kwargs
                 )
             )
