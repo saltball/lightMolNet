@@ -30,7 +30,7 @@ class FullerNet(nn.Module):
                  n_gaussians=6,
                  n_filters: int = 128,
                  n_interactions: int = 3,
-                 cutoff: float = 5.0,
+                 cutoff: float = 2.0,
                  cutoff_network: torch.nn.Module = CosineCutoff,
                  normalize_filter: bool = False,
                  distance_expansion=None,
@@ -131,14 +131,15 @@ class FullerNet(nn.Module):
         return self.W(E_pi)
 
 
-class LitFullerNet(LitNetParent):
-    def init(self, dis_cut=5,
+class LitFullerNet(LitNetParent,pl.LightningModule):
+
+    def init(self, dis_cut=2,
              max_Z=18,
              n_atom_embeddings=128,
-             n_gaussians=16,
-             n_filters=6,
+             n_gaussians=12,
+             n_filters=5,
              n_interactions=5,
-             cutoff=5, **kwargs):
+             cutoff=3, **kwargs):
         self.fullernet = FullerNet(dis_cut=dis_cut,
                                    max_Z=max_Z,
                                    n_atom_embeddings=n_atom_embeddings,
@@ -199,10 +200,10 @@ def cli_main(ckpt_path=None, schnetold=False):
     dataset.prepare_data()
     dataset.setup(data_partial=None)
     scheduler = {"_scheduler": torch.optim.lr_scheduler.CyclicLR,
-                 "base_lr": 1e-7,
+                 "base_lr": 1e-9,
                  "max_lr": 1e-4,
                  "step_size_up": 10,
-                 "step_size_down": 100,
+                 "step_size_down": 50,
                  "cycle_momentum": False
                  }
     model = LitFullerNet(learning_rate=1e-2,
@@ -212,6 +213,7 @@ def cli_main(ckpt_path=None, schnetold=False):
                          # means=0,
                          # stddevs=1
                          )
+
     if ckpt_path is not None:
         from collections import OrderedDict
         state_dict = torch.load(ckpt_path)
